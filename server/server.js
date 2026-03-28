@@ -1125,6 +1125,12 @@ app.get('/api/pdd/authority/status', async (req, res) => {
 // ============================================
 // 启动服务
 // ============================================
+// 根路径重定向
+app.get('/', (req, res) => {
+  res.redirect('/ai-picker.html');
+});
+
+// 本地开发时启动服务器
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
@@ -1132,3 +1138,6 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`📱 H5 Page: http://localhost:${PORT}/ai-picker.html`);
   });
 }
+
+// 导出给 Vercel Serverless Functions
+module.exports = app;
