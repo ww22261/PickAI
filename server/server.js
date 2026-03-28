@@ -9,6 +9,7 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const path = require('path');
 const crypto = require('crypto');
 
 // 尝试加载.env文件（如果存在）
@@ -23,6 +24,9 @@ const app = express();
 // 中间件
 app.use(cors());
 app.use(express.json());
+
+// 静态文件服务 (Vercel部署时需要)
+app.use(express.static(path.join(__dirname, '../public')));
 
 // ============================================
 // 配置 - 所有敏感信息从环境变量读取
