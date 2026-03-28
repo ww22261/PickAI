@@ -1125,7 +1125,10 @@ app.get('/api/pdd/authority/status', async (req, res) => {
 // ============================================
 // 启动服务
 // ============================================
-app.listen(PORT, () => {
-  console.log(`🚀 PickAI Server running at http://localhost:${PORT}`);
-  console.log(`📱 H5 Page: http://localhost:${PORT}/ai-picker.html`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 PickAI Server running at http://localhost:${PORT}`);
+    console.log(`📱 H5 Page: http://localhost:${PORT}/ai-picker.html`);
+  });
+}
