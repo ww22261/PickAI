@@ -1,0 +1,53 @@
+{
+  "startTime": "2026-03-25T04:04:20.072Z",
+  "results": {
+    "passed": [
+      {
+        "name": "HTML文件存在",
+        "result": "HTML文件存在"
+      },
+      {
+        "name": "HTML结构完整性",
+        "result": "所有18个核心元素存在"
+      },
+      {
+        "name": "CSS样式完整性",
+        "result": "CSS样式完整"
+      },
+      {
+        "name": "JavaScript功能函数",
+        "result": "所有18个核心函数存在"
+      },
+      {
+        "name": "动态问题生成逻辑",
+        "result": "动态问题生成逻辑完整"
+      },
+      {
+        "name": "状态管理",
+        "result": "状态管理完整"
+      },
+      {
+        "name": "API接口调用",
+        "result": "API接口调用配置正确"
+      },
+      {
+        "name": "响应式布局",
+        "result": "响应式布局配置正确"
+      },
+      {
+        "name": "服务器文件",
+        "result": "服务器文件完整"
+      },
+      {
+        "name": "模拟数据完整性",
+        "result": "模拟数据完整，包含三个平台"
+      }
+    ],
+    "failed": []
+  },
+  "summary": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0
+  }
+}

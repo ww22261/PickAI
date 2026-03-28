@@ -1,0 +1,13 @@
+{
+  "name": "pickai",
+  "version": "1.1.0",
+  "description": "PickAI - AI智能选品助手",
+  "private": true,
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

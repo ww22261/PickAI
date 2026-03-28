@@ -1,0 +1,11 @@
+{
+  "name": "pickai-test",
+  "version": "1.0.0",
+  "description": "PickAI 自动化测试",
+  "scripts": {
+    "test": "node auto-test.js"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  }
+}

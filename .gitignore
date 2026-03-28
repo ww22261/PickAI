@@ -1,0 +1,36 @@
+# 依赖
+node_modules/
+
+# 环境变量 - 包含敏感信息，绝不提交
+.env
+*.env.local
+
+# 日志
+logs/
+*.log
+npm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# 测试覆盖率
+coverage/
+
+# Vercel
+.vercel
+
+# 构建输出
+dist/
+build/

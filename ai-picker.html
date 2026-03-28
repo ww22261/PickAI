@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PickAI · 帮你找到最对的好物</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0D0D0D;
+  --paper: #F7F4EF;
+  --cream: #EDE9E1;
+  --warm: #C8A97E;
+  --warm-light: #F0E8D8;
+  --accent: #E8512A;
+  --accent2: #2A7AE8;
+  --muted: #9A9082;
+  --card-bg: #FFFFFF;
+  --radius: 20px;
+  --shadow: 0 8px 40px rgba(13,13,13,0.10);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Noto Sans SC', 'PingFang SC', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── 顶部导航 ─── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px;
+  background: rgba(247,244,239,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(200,169,126,0.2);
+}
+.logo {
+  font-size: 20px; font-weight: 900; letter-spacing: -0.5px;
+  color: var(--ink);
+}
+.logo span { color: var(--accent); }
+
+/* ─── 进度条 ─── */
+.progress-bar {
+  display: flex; align-items: center; gap: 6px;
+}
+.step-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--cream);
+  border: 1.5px solid var(--warm);
+  transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+.step-dot.active {
+  width: 24px; border-radius: 4px;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.step-dot.done {
+  background: var(--warm);
+  border-color: var(--warm);
+}
+
+/* ─── 页面容器 ─── */
+.page {
+  display: none;
+  min-height: 100vh;
+  padding: 80px 0 40px;
+  animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+.page.active { display: flex; flex-direction: column; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ─── Page 1：输入 ─── */
+.hero-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--warm);
+  background: var(--warm-light);
+  padding: 5px 12px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+  margin-top: 32px;
+}
+.hero-title {
+  font-size: clamp(28px, 7vw, 38px);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -1px;
+  margin-bottom: 10px;
+}
+.hero-title em {
+  font-style: normal;
+  color: var(--accent);
+  position: relative;
+  display: inline-block;
+}
+.hero-sub {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 36px;
+}
+
+.input-wrap {
+  position: relative;
+  margin-bottom: 14px;
+}
+.main-input {
+  width: 100%;
+  background: white;
+  border: 2px solid var(--cream);
+  border-radius: 16px;
+  padding: 18px 20px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  outline: none;
+  resize: none;
+  min-height: 100px;
+  line-height: 1.6;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow);
+}
+.main-input:focus {
+  border-color: var(--warm);
+  box-shadow: 0 0 0 4px rgba(200,169,126,0.15), var(--shadow);
+}
+.main-input::placeholder { color: #C4B9A8; }
+.char-count {
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  margin-right: 4px;
+}
+
+.tags-row {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 28px;
+}
+.tag-chip {
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--cream);
+  background: white;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tag-chip:hover {
+  border-color: var(--warm);
+  color: var(--ink);
+  background: var(--warm-light);
+  transform: translateY(-1px);
+}
+
+/* ─── 按钮 ─── */
+.btn-primary {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  padding: 17px;
+  border-radius: 16px;
+  border: none;
+  background: var(--ink);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  letter-spacing: 0.5px;
+}
+.btn-primary:hover {
+  background: #1A1A1A;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(13,13,13,0.25);
+}
+.btn-primary:active { transform: translateY(0); }
+.btn-primary .arrow { transition: transform 0.2s; }
+.btn-primary:hover .arrow { transform: translateX(4px); }
+
+.btn-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none;
+  font-size: 13px; color: var(--muted);
+  cursor: pointer; font-family: inherit;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  transition: color 0.2s;
+}
+.btn-back:hover { color: var(--ink); }
+
+/* ─── Page 2：问题 ─── */
+.q-header { margin-top: 24px; margin-bottom: 28px; }
+.q-step-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  color: var(--warm); margin-bottom: 8px;
+}
+.q-title { font-size: 22px; font-weight: 900; line-height: 1.3; letter-spacing: -0.5px; }
+
+.question-block { margin-bottom: 28px; }
+.question-text {
+  font-size: 14px; font-weight: 700;
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.q-num {
+  width: 22px; height: 22px;
+  background: var(--ink); color: white;
+  border-radius: 50%;
+  font-size: 11px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.options-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.option-card {
+  border: 2px solid var(--cream);
+  border-radius: 14px;
+  background: white;
+  padding: 14px 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.option-card:hover {
+  border-color: var(--warm);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(200,169,126,0.2);
+}
+.option-card.selected {
+  border-color: var(--accent);
+  background: #FFF5F2;
+  box-shadow: 0 0 0 4px rgba(232,81,42,0.12);
+}
+.option-emoji { font-size: 24px; margin-bottom: 6px; }
+.option-label { font-size: 13px; font-weight: 700; margin-bottom: 2px; color: var(--ink); }
+.option-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+/* ─── Page 3：结果 ─── */
+.result-header { margin-top: 24px; margin-bottom: 20px; }
+.result-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  color: var(--accent);
+  background: #FFF0EB;
+  padding: 5px 12px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+.result-title { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
+.result-sub { font-size: 13px; color: var(--muted); }
+
+/* 风格卡片 */
+.style-card {
+  background: var(--ink);
+  color: white;
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.style-card::before {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: rgba(200,169,126,0.2);
+}
+.style-card::after {
+  content: '';
+  position: absolute;
+  bottom: -20px; left: -20px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: rgba(232,81,42,0.15);
+}
+.style-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.style-tag {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.style-name { font-size: 22px; font-weight: 900; margin-bottom: 6px; }
+.style-desc { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+
+/* 平台筛选 */
+.platform-tabs {
+  display: flex; gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.platform-tabs::-webkit-scrollbar { display: none; }
+.pt-tab {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1.5px solid var(--cream);
+  background: white;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.pt-tab.active {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+
+/* 商品卡片 */
+.products-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.prod-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1.5px solid var(--cream);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.prod-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  border-color: var(--warm);
+}
+.prod-img-wrap {
+  position: relative;
+  padding-top: 100%;
+  background: var(--cream);
+  overflow: hidden;
+}
+.prod-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+.prod-card:hover .prod-img { transform: scale(1.06); }
+.prod-platform-badge {
+  position: absolute; top: 8px; left: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+}
+.badge-pdd { background: rgba(232,81,42,0.85); color: white; }
+.badge-tb  { background: rgba(255,102,0,0.85); color: white; }
+.badge-1688 { background: rgba(42,122,232,0.85); color: white; }
+.prod-score {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(13,13,13,0.75);
+  color: white;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10px; font-weight: 700;
+  backdrop-filter: blur(4px);
+}
+
+.prod-info { padding: 10px 10px 12px; }
+.prod-name {
+  font-size: 12px; font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.prod-reason {
+  font-size: 10px; color: var(--muted);
+  line-height: 1.4;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.prod-bottom { display: flex; align-items: center; justify-content: space-between; }
+.prod-price { font-size: 16px; font-weight: 900; color: var(--accent); }
+.prod-price-sub { font-size: 10px; color: var(--muted); }
+.prod-buy-btn {
+  background: var(--ink);
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+.prod-buy-btn:hover { background: var(--accent); }
+
+/* ─── 弹层 ─── */
+.overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(13,13,13,0.6);
+  backdrop-filter: blur(4px);
+  align-items: flex-end;
+  animation: fadeIn 0.2s ease;
+}
+.overlay.open { display: flex; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: white;
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 0 40px;
+  animation: slideUp 0.35s cubic-bezier(0.22,1,0.36,1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.modal-drag { width: 40px; height: 4px; background: var(--cream); border-radius: 2px; margin: 12px auto 0; }
+.modal-img-wrap { position: relative; padding-top: 65%; overflow: hidden; background: var(--cream); }
+.modal-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.modal-body { padding: 20px 20px 0; }
+.modal-platform { margin-bottom: 8px; }
+.modal-name { font-size: 17px; font-weight: 900; margin-bottom: 6px; line-height: 1.4; }
+.modal-reason-box {
+  background: var(--warm-light);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.modal-reason-label { font-size: 10px; font-weight: 700; color: var(--warm); margin-bottom: 3px; letter-spacing: 1px; }
+.modal-reason-text { font-size: 13px; color: var(--ink); line-height: 1.5; }
+.modal-meta { display: flex; gap: 16px; margin-bottom: 16px; }
+.meta-item .k { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.meta-item .v { font-size: 14px; font-weight: 700; color: var(--ink); }
+.modal-price-row { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 14px; }
+.modal-price { font-size: 28px; font-weight: 900; color: var(--accent); }
+.modal-price-ori { font-size: 13px; color: var(--muted); text-decoration: line-through; }
+.modal-buy-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  padding: 16px;
+  background: var(--accent);
+  color: white; border: none;
+  border-radius: 14px;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.2s;
+}
+.modal-buy-btn:hover { background: #D44420; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(232,81,42,0.35); }
+
+/* ─── Loading ─── */
+.loading-screen {
+  display: none;
+  position: fixed; inset: 0; z-index: 150;
+  background: var(--paper);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.loading-screen.show { display: flex; }
+.loading-icon { font-size: 48px; animation: spin 1.5s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.loading-text { font-size: 16px; font-weight: 700; color: var(--ink); }
+.loading-sub { font-size: 13px; color: var(--muted); }
+.loading-platforms { display: flex; gap: 10px; margin-top: 8px; }
+.lp { padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  animation: pulse 1.5s ease-in-out infinite; }
+.lp:nth-child(2) { animation-delay: 0.3s; }
+.lp:nth-child(3) { animation-delay: 0.6s; }
+@keyframes pulse {
+  0%,100% { opacity: 0.4; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1); }
+}
+.lp-pdd { background: #FFF0EB; color: var(--accent); }
+.lp-tb  { background: #FFF4E6; color: #E67700; }
+.lp-1688 { background: #EBF3FF; color: var(--accent2); }
+
+/* ─── 底部固定按钮区 ─── */
+.bottom-action {
+  padding: 16px 24px 24px;
+  background: linear-gradient(to top, var(--paper) 70%, transparent);
+  position: sticky; bottom: 0;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ─── 装饰 ─── */
+.deco-circle {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+.deco1 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(200,169,126,0.15) 0%, transparent 70%);
+  top: -100px; right: -100px;
+}
+.deco2 {
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(232,81,42,0.08) 0%, transparent 70%);
+  bottom: 100px; left: -60px;
+}
+</style>
+</head>
+<body>
+
+<div class="deco-circle deco1"></div>
+<div class="deco-circle deco2"></div>
+
+<!-- 顶部导航 -->
+<div class="nav">
+  <div class="logo">Pick<span>AI</span></div>
+  <div class="progress-bar">
+    <div class="step-dot active" id="dot1"></div>
+    <div class="step-dot" id="dot2"></div>
+    <div class="step-dot" id="dot3"></div>
+  </div>
+</div>
+
+<!-- ══════════ PAGE 1：输入 ══════════ -->
+<div class="page active" id="page1">
+  <div class="page-inner">
+    <div class="hero-label">✦ AI 智能选品</div>
+    <h1 class="hero-title">告诉我<br>你想买什么<em>好物</em></h1>
+    <p class="hero-sub">一句话描述你的需求，两个问题了解你的风格，AI帮你从三个平台找出最值得买的</p>
+
+    <div class="input-wrap">
+      <textarea class="main-input" id="mainInput" placeholder="例如：想买一个装书的包，能放水杯，上班背的那种…" maxlength="200" rows="4"></textarea>
+    </div>
+    <div class="char-count"><span id="charCount">0</span> / 200</div>
+
+    <div class="tags-row">
+      <div class="tag-chip" onclick="fillInput('装书的通勤包，能放水杯')">🎒 通勤包</div>
+      <div class="tag-chip" onclick="fillInput('秋季针织毛衣，宽松舒适')">🧥 毛衣</div>
+      <div class="tag-chip" onclick="fillInput('办公室用的蓝牙耳机')">🎧 耳机</div>
+      <div class="tag-chip" onclick="fillInput('桌面收纳好看又实用')">🗂️ 桌面收纳</div>
+      <div class="tag-chip" onclick="fillInput('冬天保暖的围巾')">🧣 围巾</div>
+    </div>
+  </div>
+
+  <div class="bottom-action">
+    <button class="btn-primary" onclick="goToPage2()">
+      下一步，确认风格 <span class="arrow">→</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════ PAGE 2：风格问题 ══════════ -->
+<div class="page" id="page2">
+  <div class="page-inner">
+    <button class="btn-back" onclick="goToPage1()">← 返回</button>
+
+    <div class="q-header">
+      <div class="q-step-label">STEP 02 / 03</div>
+      <h2 class="q-title">两个小问题<br>帮我了解你的风格</h2>
+    </div>
+
+    <!-- 问题1 -->
+    <div class="question-block">
+      <div class="question-text">
+        <div class="q-num">1</div>
+        你更喜欢哪种整体风格？
+      </div>
+      <div class="options-grid">
+        <div class="option-card" onclick="selectQ1(this,'简约低调')" data-val="简约低调">
+          <div class="option-emoji">🤍</div>
+          <div class="option-label">简约低调</div>
+          <div class="option-desc">黑白灰，极简线条</div>
+        </div>
+        <div class="option-card" onclick="selectQ1(this,'轻熟活力')" data-val="轻熟活力">
+          <div class="option-emoji">🌸</div>
+          <div class="option-label">轻熟活力</div>
+          <div class="option-desc">马卡龙色，甜而不腻</div>
+        </div>
+        <div class="option-card" onclick="selectQ1(this,'商务干练')" data-val="商务干练">
+          <div class="option-emoji">💼</div>
+          <div class="option-label">商务干练</div>
+          <div class="option-desc">皮质感，正式有气场</div>
+        </div>
+        <div class="option-card" onclick="selectQ1(this,'自然慵懒')" data-val="自然慵懒">
+          <div class="option-emoji">🌿</div>
+          <div class="option-label">自然慵懒</div>
+          <div class="option-desc">大地色，舒适随性</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 问题2 -->
+    <div class="question-block">
+      <div class="question-text">
+        <div class="q-num">2</div>
+        你的预算大概是？
+      </div>
+      <div class="options-grid">
+        <div class="option-card" onclick="selectQ2(this,'50元以内')" data-val="50元以内">
+          <div class="option-emoji">💰</div>
+          <div class="option-label">50元以内</div>
+          <div class="option-desc">实惠够用就好</div>
+        </div>
+        <div class="option-card" onclick="selectQ2(this,'50-150元')" data-val="50-150元">
+          <div class="option-emoji">💳</div>
+          <div class="option-label">50 - 150元</div>
+          <div class="option-desc">质价比优先</div>
+        </div>
+        <div class="option-card" onclick="selectQ2(this,'150-300元')" data-val="150-300元">
+          <div class="option-emoji">🎁</div>
+          <div class="option-label">150 - 300元</div>
+          <div class="option-desc">品质与颜值兼顾</div>
+        </div>
+        <div class="option-card" onclick="selectQ2(this,'300元以上')" data-val="300元以上">
+          <div class="option-emoji">✨</div>
+          <div class="option-label">300元以上</div>
+          <div class="option-desc">好设计值得投资</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-action">
+    <button class="btn-primary" id="searchBtn" onclick="startSearch()" style="opacity:0.4;pointer-events:none;">
+      开始为我找货 <span class="arrow">→</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════ Loading ══════════ -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-icon">🔍</div>
+  <div class="loading-text">AI正在为你选品中…</div>
+  <div class="loading-sub">同步搜索三个平台，筛选最符合你风格的好物</div>
+  <div class="loading-platforms">
+    <div class="lp lp-pdd">拼多多</div>
+    <div class="lp lp-tb">淘宝</div>
+    <div class="lp lp-1688">1688</div>
+  </div>
+</div>
+
+<!-- ══════════ PAGE 3：结果 ══════════ -->
+<div class="page" id="page3">
+  <div class="page-inner">
+    <button class="btn-back" onclick="goToPage2()">← 重新选择风格</button>
+
+    <div class="result-header">
+      <div class="result-label">✦ AI 选品结果</div>
+      <h2 class="result-title">为你找到 <span id="resultCount">6</span> 款好物</h2>
+      <p class="result-sub" id="resultSub">根据你的偏好，从3个平台精选</p>
+    </div>
+
+    <!-- 风格总结卡片 -->
+    <div class="style-card" id="styleCard">
+      <div class="style-tag-row" id="styleTags"></div>
+      <div class="style-name" id="styleName">轻熟活力 · 通勤风</div>
+      <div class="style-desc" id="styleDesc">喜欢有点甜又不失成熟感的风格，注重功能与颜值兼顾，预算适中，性价比优先。</div>
+    </div>
+
+    <!-- 平台筛选 -->
+    <div class="platform-tabs">
+      <button class="pt-tab active" onclick="filterPlatform(this,'all')">全部</button>
+      <button class="pt-tab" onclick="filterPlatform(this,'pdd')">🛍️ 拼多多</button>
+      <button class="pt-tab" onclick="filterPlatform(this,'tb')">🟠 淘宝</button>
+      <button class="pt-tab" onclick="filterPlatform(this,'1688')">🔵 1688</button>
+    </div>
+
+    <!-- 商品网格 -->
+    <div class="products-grid" id="productsGrid"></div>
+  </div>
+</div>
+
+<!-- 商品详情弹层 -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-img-wrap">
+      <img class="modal-img" id="modalImg" src="" alt="">
+    </div>
+    <div class="modal-body">
+      <div class="modal-platform" id="modalPlatform"></div>
+      <div class="modal-name" id="modalName"></div>
+      <div class="modal-reason-box">
+        <div class="modal-reason-label">✦ AI 推荐理由</div>
+        <div class="modal-reason-text" id="modalReason"></div>
+      </div>
+      <div class="modal-meta">
+        <div class="meta-item">
+          <div class="k">月销量</div>
+          <div class="v" id="modalSales"></div>
+        </div>
+        <div class="meta-item">
+          <div class="k">综合评分</div>
+          <div class="v" id="modalScore"></div>
+        </div>
+        <div class="meta-item">
+          <div class="k">配送</div>
+          <div class="v">包邮</div>
+        </div>
+      </div>
+      <div class="modal-price-row">
+        <div>
+          <div class="modal-price" id="modalPrice"></div>
+          <div class="modal-price-ori" id="modalPriceOri"></div>
+        </div>
+      </div>
+      <button class="modal-buy-btn" id="modalBuyBtn">
+        立即购买 →
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 状态 ──
+let state = {
+  input: '',
+  q1: '',
+  q2: '',
+  currentFilter: 'all'
+};
+
+// ── 模拟商品数据（实际接拼多多/淘宝/1688 API）──
+const mockProducts = [
+  {
+    id:1, platform:'pdd', platformLabel:'拼多多', badgeClass:'badge-pdd',
+    name:'简约大容量帆布托特包 A4装书杯套通勤包',
+    img:'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&q=80',
+    price:'69', priceOri:'128', score:'9.4', sales:'3.2万',
+    reason:'大容量A4可放，侧边杯套设计，上班通勤颜值在线',
+    url:'#'
+  },
+  {
+    id:2, platform:'tb', platformLabel:'淘宝', badgeClass:'badge-tb',
+    name:'马卡龙色帆布包女大学生书包手提单肩两用',
+    img:'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80',
+    price:'89', priceOri:'159', score:'9.1', sales:'1.8万',
+    reason:'马卡龙粉绿双色，轻熟感十足，可单肩可手提',
+    url:'#'
+  },
+  {
+    id:3, platform:'1688', platformLabel:'1688', badgeClass:'badge-1688',
+    name:'工厂直供 帆布托特包 定制款大容量女包',
+    img:'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80',
+    price:'35', priceOri:'80', score:'8.7', sales:'5.6万',
+    reason:'工厂直供价格极低，同款市场价80+，批量也合适',
+    url:'#'
+  },
+  {
+    id:4, platform:'pdd', platformLabel:'拼多多', badgeClass:'badge-pdd',
+    name:'尼龙轻便双肩包 防水大容量 学生通勤两用',
+    img:'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80',
+    price:'99', priceOri:'198', score:'9.3', sales:'2.1万',
+    reason:'防水面料好打理，双肩减压，装书本电脑都够用',
+    url:'#'
+  },
+  {
+    id:5, platform:'tb', platformLabel:'淘宝', badgeClass:'badge-tb',
+    name:'ins风帆布单肩包 文艺小清新女生书包',
+    img:'https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?w=400&q=80',
+    price:'79', priceOri:'139', score:'9.0', sales:'8800',
+    reason:'ins风文艺感，粉绿配色可选，轻盈不压肩',
+    url:'#'
+  },
+  {
+    id:6, platform:'1688', platformLabel:'1688', badgeClass:'badge-1688',
+    name:'韩版帆布手提包 大号 学生上班购物袋',
+    img:'https://images.unsplash.com/photo-1575032617751-6ddec2089882?w=400&q=80',
+    price:'28', priceOri:'65', score:'8.5', sales:'9.3万',
+    reason:'超高性价比，1688厂家直供，颜色多款可选',
+    url:'#'
+  }
+];
+
+// ── 工具函数 ──
+function fillInput(text) {
+  document.getElementById('mainInput').value = text;
+  updateCharCount();
+}
+
+function updateCharCount() {
+  const v = document.getElementById('mainInput').value;
+  document.getElementById('charCount').textContent = v.length;
+}
+document.getElementById('mainInput').addEventListener('input', updateCharCount);
+
+function updateDots(step) {
+  [1,2,3].forEach(i => {
+    const d = document.getElementById('dot'+i);
+    d.className = 'step-dot';
+    if(i < step) d.classList.add('done');
+    else if(i === step) d.classList.add('active');
+  });
+}
+
+function goToPage1() {
+  showPage('page1'); updateDots(1);
+}
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function goToPage2() {
+  const val = document.getElementById('mainInput').value.trim();
+  if(!val) {
+    document.getElementById('mainInput').style.borderColor = '#E85142';
+    document.getElementById('mainInput').placeholder = '请先描述一下你想买什么～';
+    setTimeout(()=>{
+      document.getElementById('mainInput').style.borderColor = '';
+      document.getElementById('mainInput').placeholder = '例如：想买一个装书的包，能放水杯，上班背的那种…';
+    }, 2000);
+    return;
+  }
+  state.input = val;
+  showPage('page2'); updateDots(2);
+}
+
+let q1val='', q2val='';
+function selectQ1(el, val) {
+  document.querySelectorAll('#page2 .question-block:first-of-type .option-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  q1val = val; state.q1 = val;
+  checkEnableSearch();
+}
+function selectQ2(el, val) {
+  document.querySelectorAll('#page2 .question-block:last-of-type .option-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  q2val = val; state.q2 = val;
+  checkEnableSearch();
+}
+function checkEnableSearch() {
+  const btn = document.getElementById('searchBtn');
+  if(q1val && q2val) {
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  }
+}
+
+function startSearch() {
+  // 显示loading
+  document.getElementById('loadingScreen').classList.add('show');
+  setTimeout(()=>{
+    document.getElementById('loadingScreen').classList.remove('show');
+    buildResultPage();
+    showPage('page3'); updateDots(3);
+  }, 2200);
+}
+
+function buildResultPage() {
+  // 风格总结
+  const styleMap = {
+    '简约低调': { name:'简约低调 · 极简风', desc:'偏爱干净利落的设计，黑白灰配色，少即是多的美学，不跟风但有格调。', tags:['#极简','#黑白灰','#耐看'] },
+    '轻熟活力': { name:'轻熟活力 · 通勤风', desc:'喜欢有点甜又不失成熟感的风格，注重功能与颜值兼顾，预算适中，性价比优先。', tags:['#马卡龙','#轻熟','#活力'] },
+    '商务干练': { name:'商务干练 · 职场风', desc:'注重品质和专业感，皮质细节加分，适合正式场合，愿意为好设计溢价。', tags:['#皮质感','#专业','#商务'] },
+    '自然慵懒': { name:'自然慵懒 · 原野风', desc:'大地色系，棉麻材质，随性舒适不刻意，透露着一种松弛的生活态度。', tags:['#大地色','#棉麻','#慵懒'] },
+  };
+  const s = styleMap[state.q1] || styleMap['轻熟活力'];
+  document.getElementById('styleName').textContent = s.name + ' · 预算' + state.q2;
+  document.getElementById('styleDesc').textContent = s.desc;
+  const tagsEl = document.getElementById('styleTags');
+  tagsEl.innerHTML = '';
+  s.tags.forEach(t => {
+    const span = document.createElement('span');
+    span.className = 'style-tag';
+    span.textContent = t;
+    tagsEl.appendChild(span);
+  });
+  const budgetTag = document.createElement('span');
+  budgetTag.className = 'style-tag';
+  budgetTag.textContent = '预算' + state.q2;
+  tagsEl.appendChild(budgetTag);
+
+  renderProducts('all');
+}
+
+function renderProducts(filter) {
+  const grid = document.getElementById('productsGrid');
+  const filtered = filter==='all' ? mockProducts : mockProducts.filter(p=>p.platform===filter);
+  document.getElementById('resultCount').textContent = filtered.length;
+
+  grid.innerHTML = '';
+  filtered.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'prod-card';
+    div.innerHTML = `
+      <div class="prod-img-wrap">
+        <img class="prod-img" src="${p.img}" alt="${p.name}" loading="lazy">
+        <span class="prod-platform-badge ${p.badgeClass}">${p.platformLabel}</span>
+        <span class="prod-score">⭐ ${p.score}</span>
+      </div>
+      <div class="prod-info">
+        <div class="prod-name">${p.name}</div>
+        <div class="prod-reason">${p.reason}</div>
+        <div class="prod-bottom">
+          <div>
+            <div class="prod-price">¥${p.price}</div>
+            <div class="prod-price-sub">原价¥${p.priceOri}</div>
+          </div>
+          <button class="prod-buy-btn">查看</button>
+        </div>
+      </div>
+    `;
+    div.onclick = () => openModal(p);
+    grid.appendChild(div);
+  });
+}
+
+function filterPlatform(el, val) {
+  document.querySelectorAll('.pt-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  state.currentFilter = val;
+  renderProducts(val);
+}
+
+function openModal(p) {
+  document.getElementById('modalImg').src = p.img;
+  document.getElementById('modalName').textContent = p.name;
+  document.getElementById('modalReason').textContent = p.reason;
+  document.getElementById('modalSales').textContent = p.sales;
+  document.getElementById('modalScore').textContent = p.score + ' 分';
+  document.getElementById('modalPrice').textContent = '¥' + p.price;
+  document.getElementById('modalPriceOri').textContent = '原价 ¥' + p.priceOri;
+  document.getElementById('modalPlatform').innerHTML = `<span class="prod-platform-badge ${p.badgeClass}" style="position:static;display:inline-block">${p.platformLabel}</span>`;
+  document.getElementById('modalBuyBtn').onclick = () => {
+    window.open(p.url, '_blank');
+  };
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if(e.target === document.getElementById('overlay')) {
+    document.getElementById('overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+</script>
+</body>
+</html>
