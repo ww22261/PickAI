@@ -5,686 +5,707 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>PickAI · 帮你找到最对的好物</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
+/* ─── Design Tokens ─── */
 :root {
-  --ink: #0D0D0D;
-  --paper: #F7F4EF;
-  --cream: #EDE9E1;
-  --warm: #C8A97E;
-  --warm-light: #F0E8D8;
-  --accent: #E8512A;
-  --accent2: #2A7AE8;
-  --muted: #9A9082;
-  --card-bg: #FFFFFF;
-  --radius: 20px;
-  --shadow: 0 8px 40px rgba(13,13,13,0.10);
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --ink:       oklch(14% 0.01 60);
+  --ink-soft:  oklch(40% 0.01 60);
+  --paper:     oklch(97% 0.008 80);
+  --warm-1:    oklch(92% 0.025 70);
+  --warm-2:    oklch(85% 0.04  70);
+  --warm-3:    oklch(65% 0.08  50);
+  --accent:    oklch(58% 0.21  28);   /* deep coral-red */
+  --accent-lt: oklch(95% 0.04  28);
+  --blue:      oklch(52% 0.18 255);
+  --white:     oklch(99.5% 0.002 80);
+  --shadow-sm: 0 2px 8px oklch(14% 0.01 60 / 0.07);
+  --shadow-md: 0 8px 32px oklch(14% 0.01 60 / 0.10);
+  --shadow-lg: 0 20px 60px oklch(14% 0.01 60 / 0.14);
+  --safe-b:    env(safe-area-inset-bottom, 0px);
+  --r-sm: 10px;
+  --r-md: 18px;
+  --r-lg: 26px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html { scroll-behavior: smooth; }
 
 body {
   font-family: 'Noto Sans SC', 'PingFang SC', sans-serif;
   background: var(--paper);
   color: var(--ink);
-  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: hidden;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ─── 顶部导航 ─── */
+/* ─── NAV ─── */
 .nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  position: fixed; top: 0; inset-inline: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 24px;
-  background: rgba(247,244,239,0.92);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(200,169,126,0.2);
+  padding: 14px 24px;
+  background: oklch(97% 0.008 80 / 0.88);
+  backdrop-filter: blur(20px) saturate(1.5);
+  border-bottom: 1px solid var(--warm-2);
 }
+
 .logo {
-  font-size: 20px; font-weight: 900; letter-spacing: -0.5px;
+  display: flex; align-items: baseline; gap: 2px;
+  font-family: 'Playfair Display', serif;
+  font-size: 21px; font-weight: 900;
+  letter-spacing: -0.5px;
   color: var(--ink);
 }
-.logo span { color: var(--accent); }
-
-/* ─── 进度条 ─── */
-.progress-bar {
-  display: flex; align-items: center; gap: 6px;
+.logo-ai {
+  color: var(--accent);
+  font-style: italic;
 }
-.step-dot {
-  width: 8px; height: 8px;
+.logo-dot {
+  width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--cream);
-  border: 1.5px solid var(--warm);
-  transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
-}
-.step-dot.active {
-  width: 24px; border-radius: 4px;
   background: var(--accent);
-  border-color: var(--accent);
+  margin-bottom: 6px;
+  animation: blink 2.4s ease-in-out infinite;
 }
-.step-dot.done {
-  background: var(--warm);
-  border-color: var(--warm);
-}
+@keyframes blink { 0%,80%,100%{opacity:1} 40%{opacity:.3} }
 
-/* ─── 页面容器 ─── */
+/* Step progress — editorial dashes */
+.progress-bar { display: flex; align-items: center; gap: 5px; }
+.step-dash {
+  height: 3px; border-radius: 2px;
+  background: var(--warm-2);
+  transition: width .4s cubic-bezier(.4,0,.2,1), background .3s;
+}
+.step-dash.short  { width: 14px; }
+.step-dash.active { width: 28px; background: var(--accent); }
+.step-dash.done   { width: 14px; background: var(--warm-3); }
+
+/* ─── Page System ─── */
 .page {
   display: none;
-  min-height: 100vh;
-  padding: 80px 0 40px;
-  animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both;
+  min-height: 100svh;
+  padding-top: 64px;
+  animation: fadeUp .45s cubic-bezier(.22,1,.36,1) both;
 }
 .page.active { display: flex; flex-direction: column; }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(30px); }
+  from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 .page-inner {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-width: 480px;
-  width: 100%;
+  display: flex; flex-direction: column;
+  max-width: 520px; width: 100%;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 22px;
 }
 
-/* ─── Page 1：输入 ─── */
-.hero-label {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--warm);
-  background: var(--warm-light);
-  padding: 5px 12px;
-  border-radius: 20px;
-  margin-bottom: 20px;
-  margin-top: 32px;
+/* ─── Page 1: Hero ─── */
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 36px; margin-bottom: 18px;
+  font-size: 11px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--warm-3);
 }
+.eyebrow-line {
+  width: 28px; height: 1.5px;
+  background: var(--warm-3);
+}
+
 .hero-title {
-  font-size: clamp(28px, 7vw, 38px);
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(34px, 9vw, 52px);
   font-weight: 900;
-  line-height: 1.15;
-  letter-spacing: -1px;
-  margin-bottom: 10px;
-}
-.hero-title em {
-  font-style: normal;
-  color: var(--accent);
-  position: relative;
-  display: inline-block;
-}
-.hero-sub {
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.6;
-  margin-bottom: 36px;
-}
-
-.input-wrap {
-  position: relative;
+  line-height: 1.1;
+  letter-spacing: -1.5px;
   margin-bottom: 14px;
 }
+.hero-title em {
+  font-style: italic;
+  color: var(--accent);
+}
+.hero-title .underline-word {
+  position: relative; display: inline-block;
+  font-style: normal;
+}
+.hero-title .underline-word::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 2px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  transform: scaleX(0); transform-origin: left;
+  animation: drawLine 1s .6s cubic-bezier(.22,1,.36,1) forwards;
+}
+@keyframes drawLine { to { transform: scaleX(1); } }
+
+.hero-sub {
+  font-size: 13.5px; color: var(--ink-soft);
+  line-height: 1.7; margin-bottom: 30px;
+  max-width: 340px;
+}
+
+/* Input area */
+.input-wrap { position: relative; margin-bottom: 6px; }
+
 .main-input {
   width: 100%;
-  background: white;
-  border: 2px solid var(--cream);
-  border-radius: 16px;
+  background: var(--white);
+  border: 1.5px solid var(--warm-2);
+  border-radius: var(--r-md);
   padding: 18px 20px;
-  font-size: 15px;
-  font-family: inherit;
-  color: var(--ink);
-  outline: none;
-  resize: none;
-  min-height: 100px;
-  line-height: 1.6;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  box-shadow: var(--shadow);
+  font-size: 14.5px; font-family: inherit;
+  color: var(--ink); outline: none;
+  resize: none; min-height: 108px; line-height: 1.65;
+  transition: border-color .25s, box-shadow .25s;
+  box-shadow: var(--shadow-sm);
 }
 .main-input:focus {
-  border-color: var(--warm);
-  box-shadow: 0 0 0 4px rgba(200,169,126,0.15), var(--shadow);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px oklch(58% 0.21 28 / 0.10), var(--shadow-sm);
 }
-.main-input::placeholder { color: #C4B9A8; }
+.main-input::placeholder { color: var(--warm-3); opacity: .7; }
+
 .char-count {
-  text-align: right;
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 6px;
-  margin-right: 4px;
+  text-align: right; font-size: 11px;
+  color: var(--warm-3); margin-bottom: 22px;
+  padding-right: 2px;
 }
 
-.tags-row {
-  display: flex; flex-wrap: wrap; gap: 8px;
-  margin-bottom: 28px;
+/* Tag section */
+.tags-section { margin-bottom: 24px; }
+.tags-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 11px;
 }
+.tags-title {
+  font-size: 12px; font-weight: 700;
+  color: var(--ink); letter-spacing: .5px;
+}
+.btn-refresh {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 11px; border-radius: 20px;
+  border: 1px solid var(--warm-2);
+  background: transparent;
+  font-size: 11px; color: var(--ink-soft);
+  cursor: pointer; font-family: inherit;
+  transition: all .2s;
+}
+.btn-refresh:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-lt); }
+
+.tags-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .tag-chip {
   padding: 7px 14px;
-  border-radius: 20px;
-  border: 1.5px solid var(--cream);
-  background: white;
-  font-size: 12px;
-  color: var(--muted);
+  border-radius: 30px;
+  border: 1.5px solid var(--warm-2);
+  background: var(--white);
+  font-size: 12px; color: var(--ink-soft);
   cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
+  transition: all .2s cubic-bezier(.34,1.56,.64,1);
 }
 .tag-chip:hover {
-  border-color: var(--warm);
-  color: var(--ink);
-  background: var(--warm-light);
-  transform: translateY(-1px);
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-lt);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
-/* ─── 按钮 ─── */
+/* Error */
+.error-msg {
+  color: var(--accent); font-size: 12px;
+  margin-top: 7px; animation: shake .35s ease;
+}
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)}
+}
+
+/* ─── Buttons ─── */
 .btn-primary {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%;
-  padding: 17px;
-  border-radius: 16px;
-  border: none;
-  background: var(--ink);
-  color: white;
-  font-size: 15px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
-  letter-spacing: 0.5px;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  width: 100%; padding: 17px;
+  border-radius: var(--r-md); border: none;
+  background: var(--ink); color: var(--white);
+  font-size: 14.5px; font-weight: 700; font-family: inherit;
+  cursor: pointer; letter-spacing: .3px;
+  transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  position: relative; overflow: hidden;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent 0%, oklch(99% 0 0 / .08) 100%);
 }
 .btn-primary:hover {
-  background: #1A1A1A;
+  background: var(--accent);
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(13,13,13,0.25);
+  box-shadow: 0 12px 32px oklch(58% 0.21 28 / 0.3);
 }
 .btn-primary:active { transform: translateY(0); }
-.btn-primary .arrow { transition: transform 0.2s; }
-.btn-primary:hover .arrow { transform: translateX(4px); }
-.btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
+.btn-primary .arrow { transition: transform .2s; }
+.btn-primary:hover .arrow { transform: translateX(5px); }
+.btn-primary:disabled { opacity: .38; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-primary:disabled:hover { background: var(--ink); }
 
 .btn-back {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; gap: 5px;
   background: none; border: none;
-  font-size: 13px; color: var(--muted);
+  font-size: 12.5px; color: var(--ink-soft);
   cursor: pointer; font-family: inherit;
-  padding: 8px 0;
-  margin-bottom: 8px;
-  transition: color 0.2s;
+  padding: 8px 0; margin-bottom: 4px;
+  transition: color .2s;
 }
 .btn-back:hover { color: var(--ink); }
 
-/* ─── Page 2：问题 ─── */
-.q-header { margin-top: 24px; margin-bottom: 28px; }
-.q-step-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 2px;
-  color: var(--warm); margin-bottom: 8px;
+/* ─── Bottom Action Area ─── */
+.bottom-action {
+  padding: 16px 22px calc(20px + var(--safe-b));
+  background: linear-gradient(to top, var(--paper) 65%, transparent);
+  position: sticky; bottom: 0;
+  max-width: 520px; width: 100%; margin: 0 auto;
 }
-.q-title { font-size: 22px; font-weight: 900; line-height: 1.3; letter-spacing: -0.5px; }
 
-.question-block { margin-bottom: 28px; }
+/* ─── Page 2 Questions ─── */
+.q-header { margin-top: 20px; margin-bottom: 26px; }
+.q-step-label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--warm-3); margin-bottom: 7px;
+}
+.q-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px; font-weight: 700;
+  line-height: 1.25; letter-spacing: -.5px;
+}
+
+/* Question row */
+.question-header-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
 .question-text {
   font-size: 14px; font-weight: 700;
-  margin-bottom: 12px;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 9px;
+  flex: 1; margin-right: 10px;
 }
 .q-num {
-  width: 22px; height: 22px;
-  background: var(--ink); color: white;
+  width: 24px; height: 24px;
+  background: var(--ink); color: var(--white);
   border-radius: 50%;
   font-size: 11px; font-weight: 900;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
 
-.options-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 10px;
+/* Option tags */
+.q-options-row {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 18px;
 }
-.option-card {
-  border: 2px solid var(--cream);
-  border-radius: 14px;
-  background: white;
-  padding: 14px 12px;
+.q-option-tag {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 16px;
+  border-radius: 30px;
+  border: 1.5px solid var(--warm-2);
+  background: var(--white);
+  font-size: 13px; color: var(--ink);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: var(--shadow-sm);
 }
-.option-card:hover {
-  border-color: var(--warm);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(200,169,126,0.2);
-}
-.option-card.selected {
-  border-color: var(--accent);
-  background: #FFF5F2;
-  box-shadow: 0 0 0 4px rgba(232,81,42,0.12);
-}
-.option-emoji { font-size: 24px; margin-bottom: 6px; }
-.option-label { font-size: 13px; font-weight: 700; margin-bottom: 2px; color: var(--ink); }
-.option-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
-
-/* ─── 骨架屏 Loading ─── */
-.skeleton-block {
-  margin-bottom: 28px;
-}
-.skeleton-question {
-  height: 20px;
-  width: 60%;
-  background: linear-gradient(90deg, var(--cream) 25%, var(--warm-light) 50%, var(--cream) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-  margin-bottom: 12px;
-}
-.skeleton-options {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.skeleton-option {
-  height: 80px;
-  background: linear-gradient(90deg, var(--cream) 25%, var(--warm-light) 50%, var(--cream) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 14px;
-}
-.skeleton-option:nth-child(2) { animation-delay: 0.1s; }
-.skeleton-option:nth-child(3) { animation-delay: 0.2s; }
-.skeleton-option:nth-child(4) { animation-delay: 0.3s; }
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ─── Page 3：结果 ─── */
-.result-header { margin-top: 24px; margin-bottom: 20px; }
-.result-label {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 700; letter-spacing: 2px;
-  color: var(--accent);
-  background: #FFF0EB;
-  padding: 5px 12px;
-  border-radius: 20px;
-  margin-bottom: 12px;
-}
-.result-title { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
-.result-sub { font-size: 13px; color: var(--muted); }
-
-/* 风格卡片 */
-.style-card {
-  background: var(--ink);
-  color: white;
-  border-radius: 18px;
-  padding: 20px;
-  margin-bottom: 20px;
-  position: relative;
-  overflow: hidden;
-}
-.style-card::before {
-  content: '';
-  position: absolute;
-  top: -30px; right: -30px;
-  width: 120px; height: 120px;
-  border-radius: 50%;
-  background: rgba(200,169,126,0.2);
-}
-.style-card::after {
-  content: '';
-  position: absolute;
-  bottom: -20px; left: -20px;
-  width: 80px; height: 80px;
-  border-radius: 50%;
-  background: rgba(232,81,42,0.15);
-}
-.style-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.style-tag {
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 500;
-}
-.style-name { font-size: 22px; font-weight: 900; margin-bottom: 6px; position: relative; z-index: 1; }
-.style-desc { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5; position: relative; z-index: 1; }
-
-/* 平台筛选 */
-.platform-tabs {
-  display: flex; gap: 8px;
-  margin-bottom: 16px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: none;
-}
-.platform-tabs::-webkit-scrollbar { display: none; }
-.pt-tab {
-  flex-shrink: 0;
-  padding: 7px 16px;
-  border-radius: 20px;
-  border: 1.5px solid var(--cream);
-  background: white;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-.pt-tab.active {
-  background: var(--ink);
-  color: white;
+.q-option-tag:hover {
   border-color: var(--ink);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.q-option-tag.selected {
+  border-color: var(--accent);
+  background: var(--accent-lt);
+  box-shadow: 0 0 0 3px oklch(58% 0.21 28 / 0.12);
+}
+.q-option-tag.selected .q-option-label { color: var(--accent); }
+.q-option-emoji { font-size: 16px; }
+.q-option-label { font-weight: 600; }
+.q-option-desc {
+  font-size: 10.5px; color: var(--ink-soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px;
 }
 
-/* 商品卡片 */
-.products-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 20px;
+/* Skeleton */
+.skeleton-block { margin-bottom: 24px; }
+.skeleton-q {
+  height: 18px; width: 55%;
+  background: linear-gradient(90deg, var(--warm-1) 25%, var(--warm-2) 50%, var(--warm-1) 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite;
+  border-radius: 4px; margin-bottom: 14px;
 }
-.prod-card {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1.5px solid var(--cream);
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+.skeleton-opts {
+  display: flex; flex-wrap: wrap; gap: 10px;
 }
-.prod-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
-  border-color: var(--warm);
+.skeleton-opt {
+  height: 42px; width: 110px;
+  background: linear-gradient(90deg, var(--warm-1) 25%, var(--warm-2) 50%, var(--warm-1) 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite;
+  border-radius: 30px;
 }
-.prod-img-wrap {
-  position: relative;
-  padding-top: 100%;
-  background: var(--cream);
-  overflow: hidden;
-}
-.prod-img {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
-}
-.prod-card:hover .prod-img { transform: scale(1.06); }
-.prod-platform-badge {
-  position: absolute; top: 8px; left: 8px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  backdrop-filter: blur(6px);
-}
-.badge-pdd { background: rgba(232,81,42,0.85); color: white; }
-.badge-tb  { background: rgba(255,102,0,0.85); color: white; }
-.badge-1688 { background: rgba(42,122,232,0.85); color: white; }
-.prod-score {
-  position: absolute; top: 8px; right: 8px;
-  background: rgba(13,13,13,0.75);
-  color: white;
-  padding: 2px 7px;
-  border-radius: 6px;
-  font-size: 10px; font-weight: 700;
-  backdrop-filter: blur(4px);
-}
+.skeleton-opt:nth-child(2){animation-delay:.08s}
+.skeleton-opt:nth-child(3){animation-delay:.16s}
+.skeleton-opt:nth-child(4){animation-delay:.24s}
+.skeleton-opt:nth-child(5){animation-delay:.32s}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-.prod-info { padding: 10px 10px 12px; }
-.prod-name {
-  font-size: 12px; font-weight: 600;
-  color: var(--ink);
-  line-height: 1.4;
-  margin-bottom: 4px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.prod-reason {
-  font-size: 10px; color: var(--muted);
-  line-height: 1.4;
-  margin-bottom: 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.prod-bottom { display: flex; align-items: center; justify-content: space-between; }
-.prod-price { font-size: 16px; font-weight: 900; color: var(--accent); }
-.prod-price-sub { font-size: 10px; color: var(--muted); }
-.prod-buy-btn {
-  background: var(--ink);
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.2s;
-}
-.prod-buy-btn:hover { background: var(--accent); }
-
-/* ─── 弹层 ─── */
-.overlay {
-  display: none;
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(13,13,13,0.6);
-  backdrop-filter: blur(4px);
-  align-items: flex-end;
-  animation: fadeIn 0.2s ease;
-}
-.overlay.open { display: flex; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.modal {
-  background: white;
-  border-radius: 24px 24px 0 0;
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 0 0 calc(40px + var(--safe-area-bottom));
-  animation: slideUp 0.35s cubic-bezier(0.22,1,0.36,1);
-  max-height: 90vh;
-  overflow-y: auto;
-}
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-.modal-drag { width: 40px; height: 4px; background: var(--cream); border-radius: 2px; margin: 12px auto 0; }
-.modal-img-wrap { position: relative; padding-top: 65%; overflow: hidden; background: var(--cream); }
-.modal-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.modal-body { padding: 20px 20px 0; }
-.modal-platform { margin-bottom: 8px; }
-.modal-name { font-size: 17px; font-weight: 900; margin-bottom: 6px; line-height: 1.4; }
-.modal-reason-box {
-  background: var(--warm-light);
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
-}
-.modal-reason-label { font-size: 10px; font-weight: 700; color: var(--warm); margin-bottom: 3px; letter-spacing: 1px; }
-.modal-reason-text { font-size: 13px; color: var(--ink); line-height: 1.5; }
-.modal-meta { display: flex; gap: 16px; margin-bottom: 16px; }
-.meta-item .k { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-.meta-item .v { font-size: 14px; font-weight: 700; color: var(--ink); }
-.modal-price-row { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 14px; }
-.modal-price { font-size: 28px; font-weight: 900; color: var(--accent); }
-.modal-price-ori { font-size: 13px; color: var(--muted); text-decoration: line-through; }
-.modal-buy-btn {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%;
-  padding: 16px;
-  background: var(--accent);
-  color: white; border: none;
-  border-radius: 14px;
-  font-size: 15px; font-weight: 700;
-  cursor: pointer; font-family: inherit;
-  transition: all 0.2s;
-}
-.modal-buy-btn:hover { background: #D44420; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(232,81,42,0.35); }
-
-/* ─── Loading ─── */
+/* ─── Loading Screen ─── */
 .loading-screen {
   display: none;
   position: fixed; inset: 0; z-index: 150;
   background: var(--paper);
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px;
 }
 .loading-screen.show { display: flex; }
-.loading-icon { font-size: 48px; animation: spin 1.5s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.loading-text { font-size: 16px; font-weight: 700; color: var(--ink); }
-.loading-sub { font-size: 13px; color: var(--muted); }
-.loading-platforms { display: flex; gap: 10px; margin-top: 8px; }
-.lp { padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-.lp:nth-child(2) { animation-delay: 0.3s; }
-.lp:nth-child(3) { animation-delay: 0.6s; }
-@keyframes pulse {
-  0%,100% { opacity: 0.4; transform: scale(0.95); }
-  50% { opacity: 1; transform: scale(1); }
-}
-.lp-pdd { background: #FFF0EB; color: var(--accent); }
-.lp-tb  { background: #FFF4E6; color: #E67700; }
-.lp-1688 { background: #EBF3FF; color: var(--accent2); }
 
-/* ─── 底部固定按钮区 ─── */
-.bottom-action {
-  padding: 16px 24px calc(24px + var(--safe-area-bottom));
-  background: linear-gradient(to top, var(--paper) 70%, transparent);
-  position: sticky; bottom: 0;
-  max-width: 480px;
-  width: 100%;
-  margin: 0 auto;
+.loading-icon-wrap {
+  position: relative; width: 72px; height: 72px;
 }
-
-/* ─── 装饰 ─── */
-.deco-circle {
-  position: fixed;
+.loading-ring {
+  position: absolute; inset: 0;
   border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  animation: spin 1.2s linear infinite;
 }
-.deco1 {
-  width: 300px; height: 300px;
-  background: radial-gradient(circle, rgba(200,169,126,0.15) 0%, transparent 70%);
-  top: -100px; right: -100px;
+.loading-ring-2 {
+  inset: 8px;
+  border-top-color: var(--warm-3);
+  animation-duration: .9s; animation-direction: reverse;
 }
-.deco2 {
-  width: 200px; height: 200px;
-  background: radial-gradient(circle, rgba(232,81,42,0.08) 0%, transparent 70%);
-  bottom: 100px; left: -60px;
+.loading-ring-3 {
+  inset: 16px;
+  border-top-color: var(--ink);
+  animation-duration: .7s;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; }
+.loading-sub { font-size: 12.5px; color: var(--ink-soft); text-align: center; }
+.loading-platforms {
+  display: flex; gap: 9px; margin-top: 4px;
+}
+.lp {
+  padding: 5px 14px; border-radius: 20px;
+  font-size: 11.5px; font-weight: 700;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.lp:nth-child(2){animation-delay:.3s}
+.lp:nth-child(3){animation-delay:.6s}
+@keyframes pulse {
+  0%,100%{opacity:.35; transform:scale(.94)}
+  50%{opacity:1; transform:scale(1)}
+}
+.lp-pdd { background: var(--accent-lt); color: var(--accent); }
+.lp-tb  { background: oklch(95% 0.05 60); color: oklch(52% 0.15 50); }
+.lp-1688{ background: oklch(94% 0.04 255); color: var(--blue); }
+
+/* ─── Page 3: Results ─── */
+.result-header { margin-top: 20px; margin-bottom: 18px; }
+.result-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 10px;
+}
+.result-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700; letter-spacing: -.4px; margin-bottom: 4px;
+}
+.result-sub { font-size: 12.5px; color: var(--ink-soft); }
+
+/* Style card — editorial strip */
+.style-card {
+  background: var(--ink); color: var(--white);
+  border-radius: var(--r-md);
+  padding: 22px 22px 20px;
+  margin-bottom: 20px;
+  position: relative; overflow: hidden;
+}
+.style-card-bg {
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px; border-radius: 50%;
+  background: radial-gradient(circle, oklch(65% 0.08 50 / .25) 0%, transparent 70%);
+}
+.style-card-bg2 {
+  position: absolute;
+  bottom: -30px; left: 30px;
+  width: 90px; height: 90px; border-radius: 50%;
+  background: radial-gradient(circle, oklch(58% 0.21 28 / .2) 0%, transparent 70%);
+}
+.style-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; position: relative; z-index: 1; }
+.style-tag {
+  background: oklch(99.5% 0 0 / .12);
+  border: 1px solid oklch(99.5% 0 0 / .18);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px; font-weight: 500;
+}
+.style-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 700; margin-bottom: 7px;
+  position: relative; z-index: 1;
+}
+.style-desc { font-size: 12.5px; color: oklch(99.5% 0 0 / .7); line-height: 1.55; position: relative; z-index: 1; }
+
+/* Platform tabs */
+.platform-tabs {
+  display: flex; gap: 7px; margin-bottom: 16px;
+  overflow-x: auto; padding-bottom: 2px; scrollbar-width: none;
+}
+.platform-tabs::-webkit-scrollbar { display: none; }
+.pt-tab {
+  flex-shrink: 0;
+  padding: 7px 16px; border-radius: 20px;
+  border: 1.5px solid var(--warm-2);
+  background: var(--white);
+  font-size: 12px; font-weight: 700; color: var(--ink-soft);
+  cursor: pointer; transition: all .2s; font-family: inherit;
+}
+.pt-tab.active { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.pt-tab:not(.active):hover { border-color: var(--ink-soft); color: var(--ink); }
+
+/* Product grid */
+.products-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-bottom: 24px;
 }
 
-/* ─── 错误提示 ─── */
-.error-msg {
-  color: var(--accent);
-  font-size: 12px;
-  margin-top: 8px;
-  animation: shake 0.4s ease;
+.prod-card {
+  background: var(--white);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1.5px solid var(--warm-1);
+  cursor: pointer;
+  transition: all .28s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: var(--shadow-sm);
 }
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+.prod-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--warm-2);
+}
+.prod-img-wrap {
+  position: relative; padding-top: 100%;
+  background: var(--warm-1); overflow: hidden;
+}
+.prod-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform .5s cubic-bezier(.22,1,.36,1);
+}
+.prod-card:hover .prod-img { transform: scale(1.07); }
+
+.prod-platform-badge {
+  position: absolute; top: 8px; left: 8px;
+  padding: 2px 8px; border-radius: 6px;
+  font-size: 10px; font-weight: 800;
+  letter-spacing: .3px;
+  backdrop-filter: blur(8px);
+}
+.badge-pdd  { background: oklch(58% 0.21 28 / .82); color: var(--white); }
+.badge-tb   { background: oklch(62% 0.18 50 / .82); color: var(--white); }
+.badge-1688 { background: oklch(52% 0.18 255 / .82); color: var(--white); }
+
+.prod-score {
+  position: absolute; top: 8px; right: 8px;
+  background: oklch(14% 0.01 60 / .72);
+  color: var(--white);
+  padding: 2px 7px; border-radius: 6px;
+  font-size: 10px; font-weight: 700;
+  backdrop-filter: blur(6px);
 }
 
-/* ─── Toast 提示 ─── */
+.prod-info { padding: 11px 11px 13px; }
+.prod-name {
+  font-size: 12px; font-weight: 600; color: var(--ink);
+  line-height: 1.45; margin-bottom: 5px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.prod-reason {
+  font-size: 10.5px; color: var(--ink-soft); line-height: 1.4;
+  margin-bottom: 9px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.prod-bottom { display: flex; align-items: center; justify-content: space-between; }
+.prod-price { font-size: 17px; font-weight: 900; color: var(--accent); }
+.prod-price-sub { font-size: 10px; color: var(--warm-3); }
+.prod-buy-btn {
+  background: var(--ink); color: var(--white);
+  border: none; padding: 6px 11px;
+  border-radius: var(--r-sm); font-size: 11px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: background .2s;
+}
+.prod-buy-btn:hover { background: var(--accent); }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-icon { font-size: 44px; margin-bottom: 14px; }
+.empty-title { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; margin-bottom: 7px; }
+.empty-desc { font-size: 13.5px; color: var(--ink-soft); }
+
+/* ─── Modal ─── */
+.overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: oklch(14% 0.01 60 / .55);
+  backdrop-filter: blur(6px) saturate(1.2);
+  align-items: flex-end;
+}
+.overlay.open { display: flex; }
+
+.modal {
+  background: var(--white);
+  border-radius: 26px 26px 0 0;
+  width: 100%; max-width: 520px;
+  margin: 0 auto;
+  padding: 0 0 calc(40px + var(--safe-b));
+  animation: slideUp .38s cubic-bezier(.22,1,.36,1);
+  max-height: 90svh; overflow-y: auto;
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.modal-handle {
+  width: 36px; height: 4px;
+  background: var(--warm-2); border-radius: 2px;
+  margin: 12px auto 0; cursor: pointer;
+}
+.modal-img-wrap {
+  position: relative; padding-top: 60%; overflow: hidden; background: var(--warm-1);
+}
+.modal-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.modal-body { padding: 20px 22px 0; }
+.modal-platform { margin-bottom: 9px; }
+.modal-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; margin-bottom: 12px; line-height: 1.35; }
+
+.modal-reason-box {
+  background: var(--warm-1); border-radius: 12px;
+  padding: 12px 15px; margin-bottom: 16px;
+  border-left: 3px solid var(--accent);
+}
+.modal-reason-label { font-size: 10px; font-weight: 800; color: var(--accent); margin-bottom: 4px; letter-spacing: 1.5px; text-transform: uppercase; }
+.modal-reason-text { font-size: 13px; color: var(--ink); line-height: 1.55; }
+
+.modal-meta { display: flex; gap: 20px; margin-bottom: 18px; }
+.meta-item .k { font-size: 10.5px; color: var(--ink-soft); margin-bottom: 3px; }
+.meta-item .v { font-size: 15px; font-weight: 700; }
+
+.modal-price-row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.modal-price { font-size: 30px; font-weight: 900; color: var(--accent); font-family: 'Playfair Display', serif; }
+.modal-price-ori { font-size: 13px; color: var(--ink-soft); text-decoration: line-through; }
+.modal-buy-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 16px;
+  background: var(--accent); color: var(--white);
+  border: none; border-radius: var(--r-md);
+  font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  letter-spacing: .3px;
+}
+.modal-buy-btn:hover {
+  background: oklch(52% 0.21 28);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px oklch(58% 0.21 28 / .35);
+}
+
+/* ─── Toast ─── */
 .toast {
-  position: fixed;
-  top: 100px;
-  left: 50%;
+  position: fixed; top: 80px; left: 50%;
   transform: translateX(-50%);
-  background: var(--ink);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-size: 14px;
-  z-index: 300;
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
+  background: var(--ink); color: var(--white);
+  padding: 11px 22px; border-radius: 30px;
+  font-size: 13.5px; font-weight: 500;
+  z-index: 300; opacity: 0;
+  transition: opacity .28s, transform .28s;
+  pointer-events: none; white-space: nowrap;
 }
-.toast.show {
-  opacity: 1;
+.toast.show { opacity: 1; }
+
+/* ─── Decorative ─── */
+.deco { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
+.deco-1 {
+  width: 380px; height: 380px;
+  top: -140px; right: -140px;
+  background: radial-gradient(circle, oklch(65% 0.08 50 / .12) 0%, transparent 65%);
+}
+.deco-2 {
+  width: 220px; height: 220px;
+  bottom: 80px; left: -80px;
+  background: radial-gradient(circle, oklch(58% 0.21 28 / .07) 0%, transparent 65%);
 }
 
-/* ─── 空状态 ─── */
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
+/* ─── Responsive ─── */
+@media (min-width: 640px) {
+  .products-grid { grid-template-columns: repeat(3, 1fr); }
+  .page-inner, .bottom-action { max-width: 680px; }
 }
-.empty-icon { font-size: 48px; margin-bottom: 16px; }
-.empty-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-.empty-desc { font-size: 14px; color: var(--muted); }
-
-/* ─── 桌面端适配 ─── */
-@media (min-width: 768px) {
-  .products-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .page-inner {
-    max-width: 960px;
-  }
-  .bottom-action {
-    max-width: 960px;
-  }
+@media (min-width: 1024px) {
+  .page-inner, .bottom-action { max-width: 880px; }
+  .products-grid { grid-template-columns: repeat(4, 1fr); }
 }
 </style>
 </head>
 <body>
 
-<div class="deco-circle deco1"></div>
-<div class="deco-circle deco2"></div>
-
-<!-- Toast提示 -->
+<div class="deco deco-1"></div>
+<div class="deco deco-2"></div>
 <div class="toast" id="toast"></div>
 
-<!-- 顶部导航 -->
-<div class="nav">
-  <div class="logo">Pick<span>AI</span></div>
-  <div class="progress-bar">
-    <div class="step-dot active" id="dot1"></div>
-    <div class="step-dot" id="dot2"></div>
-    <div class="step-dot" id="dot3"></div>
+<!-- ─── NAV ─── -->
+<nav class="nav">
+  <div class="logo">
+    Pick<span class="logo-ai">AI</span>
+    <div class="logo-dot"></div>
   </div>
-</div>
+  <div class="progress-bar">
+    <div class="step-dash short active" id="dot1"></div>
+    <div class="step-dash short" id="dot2"></div>
+    <div class="step-dash short" id="dot3"></div>
+    <div class="step-dash short" id="dot4"></div>
+  </div>
+</nav>
 
-<!-- ══════════ PAGE 1：输入 ══════════ -->
+<!-- ══════════ PAGE 1 ══════════ -->
 <div class="page active" id="page1">
   <div class="page-inner">
-    <div class="hero-label">✦ AI 智能选品</div>
-    <h1 class="hero-title">告诉我<br>你想买什么<em>好物</em></h1>
-    <p class="hero-sub">一句话描述你的需求，两个问题了解你的风格，AI帮你从三个平台找出最值得买的</p>
+    <div class="eyebrow">
+      <span class="eyebrow-line"></span>
+      AI 智能选品
+    </div>
+    <h1 class="hero-title">
+      告诉我，<br>你想买什么<em><span class="underline-word">好物</span></em>
+    </h1>
+    <p class="hero-sub">一句话描述需求，AI从三个平台为你精选最值得买的</p>
 
     <div class="input-wrap">
-      <textarea class="main-input" id="mainInput" placeholder="例如：想买一个装书的包，能放水杯，上班背的那种…" maxlength="200" rows="4"></textarea>
+      <textarea class="main-input" id="mainInput"
+        placeholder="例如：想买一个装书的包，能放水杯，上班背的那种…"
+        maxlength="200" rows="4"></textarea>
       <div id="inputError" class="error-msg" style="display:none;"></div>
     </div>
     <div class="char-count"><span id="charCount">0</span> / 200</div>
 
-    <div class="tags-row">
-      <div class="tag-chip" onclick="fillInput('装书的通勤包，能放水杯')">🎒 通勤包</div>
-      <div class="tag-chip" onclick="fillInput('秋季针织毛衣，宽松舒适')">🧥 毛衣</div>
-      <div class="tag-chip" onclick="fillInput('办公室用的蓝牙耳机')">🎧 耳机</div>
-      <div class="tag-chip" onclick="fillInput('桌面收纳好看又实用')">🗂️ 桌面收纳</div>
-      <div class="tag-chip" onclick="fillInput('冬天保暖的围巾')">🧣 围巾</div>
+    <div class="tags-section">
+      <div class="tags-header">
+        <span class="tags-title">🔥 热门推荐</span>
+        <button class="btn-refresh" onclick="refreshTags()">🎲 换一批</button>
+      </div>
+      <div class="tags-row" id="tagsRow"></div>
     </div>
   </div>
 
@@ -695,40 +716,69 @@ body {
   </div>
 </div>
 
-<!-- ══════════ PAGE 2：风格问题 ══════════ -->
-<div class="page" id="page2">
+<!-- ══════════ PAGE 2A ══════════ -->
+<div class="page" id="page2a">
   <div class="page-inner">
     <button class="btn-back" onclick="goToPage1()">← 返回</button>
-
     <div class="q-header">
-      <div class="q-step-label">STEP 02 / 03</div>
-      <h2 class="q-title">两个小问题<br>帮我了解你的风格</h2>
+      <div class="q-step-label">STEP 02 / 04</div>
+      <h2 class="q-title">先聊聊你的偏好</h2>
     </div>
 
-    <!-- 骨架屏Loading -->
-    <div id="questionsLoading">
+    <div id="q1Loading">
       <div class="skeleton-block">
-        <div class="skeleton-question"></div>
-        <div class="skeleton-options">
-          <div class="skeleton-option"></div>
-          <div class="skeleton-option"></div>
-          <div class="skeleton-option"></div>
-          <div class="skeleton-option"></div>
-        </div>
-      </div>
-      <div class="skeleton-block">
-        <div class="skeleton-question"></div>
-        <div class="skeleton-options">
-          <div class="skeleton-option"></div>
-          <div class="skeleton-option"></div>
-          <div class="skeleton-option"></div>
-          <div class="skeleton-option"></div>
+        <div class="skeleton-q"></div>
+        <div class="skeleton-opts">
+          <div class="skeleton-opt"></div><div class="skeleton-opt"></div>
+          <div class="skeleton-opt"></div><div class="skeleton-opt"></div>
+          <div class="skeleton-opt"></div>
         </div>
       </div>
     </div>
 
-    <!-- 动态问题容器 -->
-    <div id="questionsContainer" style="display:none;"></div>
+    <div id="q1Container" style="display:none;">
+      <div class="question-header-row">
+        <div class="question-text" id="q1Text"></div>
+        <button class="btn-refresh" onclick="refreshQ1Options()">🎲 换一批</button>
+      </div>
+      <div class="q-options-row" id="q1OptionsRow"></div>
+    </div>
+  </div>
+
+  <div class="bottom-action">
+    <button class="btn-primary" id="nextToQ2Btn" onclick="goToPage2B()" disabled>
+      下一题 <span class="arrow">→</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════ PAGE 2B ══════════ -->
+<div class="page" id="page2b">
+  <div class="page-inner">
+    <button class="btn-back" onclick="goToPage2A()">← 返回</button>
+    <div class="q-header">
+      <div class="q-step-label">STEP 03 / 04</div>
+      <h2 class="q-title">再补充一点细节</h2>
+    </div>
+
+    <div id="q2Loading">
+      <div class="skeleton-block">
+        <div class="skeleton-q"></div>
+        <div class="skeleton-opts">
+          <div class="skeleton-opt"></div><div class="skeleton-opt"></div>
+          <div class="skeleton-opt"></div><div class="skeleton-opt"></div>
+          <div class="skeleton-opt"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="q2Container" style="display:none;">
+      <div class="question-header-row">
+        <div class="question-text" id="q2Text"></div>
+        <button class="btn-refresh" onclick="refreshQ2Options()">🎲 换一批</button>
+      </div>
+      <div class="q-options-row" id="q2OptionsRow"></div>
+    </div>
   </div>
 
   <div class="bottom-action">
@@ -738,10 +788,14 @@ body {
   </div>
 </div>
 
-<!-- ══════════ Loading ══════════ -->
+<!-- ══════════ LOADING ══════════ -->
 <div class="loading-screen" id="loadingScreen">
-  <div class="loading-icon">🔍</div>
-  <div class="loading-text">AI正在为你选品中…</div>
+  <div class="loading-icon-wrap">
+    <div class="loading-ring"></div>
+    <div class="loading-ring loading-ring-2"></div>
+    <div class="loading-ring loading-ring-3"></div>
+  </div>
+  <div class="loading-text">AI 正在选品中…</div>
   <div class="loading-sub">同步搜索三个平台，筛选最符合你风格的好物</div>
   <div class="loading-platforms">
     <div class="lp lp-pdd">拼多多</div>
@@ -750,25 +804,24 @@ body {
   </div>
 </div>
 
-<!-- ══════════ PAGE 3：结果 ══════════ -->
+<!-- ══════════ PAGE 3 ══════════ -->
 <div class="page" id="page3">
   <div class="page-inner">
-    <button class="btn-back" onclick="goToPage2()">← 重新选择风格</button>
-
+    <button class="btn-back" onclick="goToPage1()">← 重新开始</button>
     <div class="result-header">
-      <div class="result-label">✦ AI 选品结果</div>
+      <div class="result-eyebrow">✦ AI 选品结果</div>
       <h2 class="result-title">为你找到 <span id="resultCount">6</span> 款好物</h2>
-      <p class="result-sub" id="resultSub">根据你的偏好，从3个平台精选</p>
+      <p class="result-sub" id="resultSub">根据你的偏好，从 3 个平台精选</p>
     </div>
 
-    <!-- 风格总结卡片 -->
     <div class="style-card" id="styleCard">
+      <div class="style-card-bg"></div>
+      <div class="style-card-bg2"></div>
       <div class="style-tag-row" id="styleTags"></div>
       <div class="style-name" id="styleName">轻熟活力 · 通勤风</div>
       <div class="style-desc" id="styleDesc">喜欢有点甜又不失成熟感的风格，注重功能与颜值兼顾，预算适中，性价比优先。</div>
     </div>
 
-    <!-- 平台筛选 -->
     <div class="platform-tabs">
       <button class="pt-tab active" onclick="filterPlatform(this,'all')">全部</button>
       <button class="pt-tab" onclick="filterPlatform(this,'pdd')">🛍️ 拼多多</button>
@@ -776,22 +829,19 @@ body {
       <button class="pt-tab" onclick="filterPlatform(this,'1688')">🔵 1688</button>
     </div>
 
-    <!-- 商品网格 -->
     <div class="products-grid" id="productsGrid"></div>
-
-    <!-- 空状态 -->
     <div class="empty-state" id="emptyState" style="display:none;">
       <div class="empty-icon">🔍</div>
       <div class="empty-title">暂无匹配商品</div>
-      <div class="empty-desc">换个关键词试试？</div>
+      <div class="empty-desc">换个平台试试？</div>
     </div>
   </div>
 </div>
 
-<!-- 商品详情弹层 -->
+<!-- ══════════ MODAL ══════════ -->
 <div class="overlay" id="overlay" onclick="closeModal(event)">
   <div class="modal">
-    <div class="modal-drag"></div>
+    <div class="modal-handle" id="modalHandle"></div>
     <div class="modal-img-wrap">
       <img class="modal-img" id="modalImg" src="" alt="">
     </div>
@@ -803,18 +853,9 @@ body {
         <div class="modal-reason-text" id="modalReason"></div>
       </div>
       <div class="modal-meta">
-        <div class="meta-item">
-          <div class="k">月销量</div>
-          <div class="v" id="modalSales"></div>
-        </div>
-        <div class="meta-item">
-          <div class="k">综合评分</div>
-          <div class="v" id="modalScore"></div>
-        </div>
-        <div class="meta-item">
-          <div class="k">配送</div>
-          <div class="v">包邮</div>
-        </div>
+        <div class="meta-item"><div class="k">月销量</div><div class="v" id="modalSales"></div></div>
+        <div class="meta-item"><div class="k">综合评分</div><div class="v" id="modalScore"></div></div>
+        <div class="meta-item"><div class="k">配送</div><div class="v">包邮</div></div>
       </div>
       <div class="modal-price-row">
         <div>
@@ -822,368 +863,406 @@ body {
           <div class="modal-price-ori" id="modalPriceOri"></div>
         </div>
       </div>
-      <button class="modal-buy-btn" id="modalBuyBtn">
-        立即购买 →
-      </button>
+      <button class="modal-buy-btn" id="modalBuyBtn">立即购买 →</button>
     </div>
   </div>
 </div>
 
 <script>
-// ============================================
-// 全局状态管理
-// ============================================
+/* ─── State ─── */
 let state = {
-  input: '',
-  questions: [],
-  q1Answer: null,
-  q2Answer: null,
-  products: [],
-  currentFilter: 'all'
+  input:'', question1:null, question2:null,
+  q1Answer:[], q2Answer:[], products:[], currentFilter:'all'
 };
+const API_BASE = window.location.hostname==='localhost' ? 'http://localhost:3000' : '';
 
-// API基础路径
-const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
-
-// ============================================
-// 工具函数
-// ============================================
-function showToast(message, duration = 2000) {
-  const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), duration);
+/* ─── Utils ─── */
+function showToast(msg,dur=2200){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+function fillInput(text){
+  document.getElementById('mainInput').value=text;
+  updateCharCount(); hideError();
+}
+function updateCharCount(){
+  document.getElementById('charCount').textContent=document.getElementById('mainInput').value.length;
+}
+function showError(msg){
+  const e=document.getElementById('inputError');
+  e.textContent=msg; e.style.display='block';
+  document.getElementById('mainInput').style.borderColor='var(--accent)';
+}
+function hideError(){
+  document.getElementById('inputError').style.display='none';
+  document.getElementById('mainInput').style.borderColor='';
+}
+function updateDots(step){
+  [1,2,3,4].forEach(i=>{
+    const d=document.getElementById('dot'+i);
+    d.className='step-dash short';
+    if(i<step) d.classList.add('done');
+    else if(i===step) d.classList.add('active');
+  });
+}
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top:0,behavior:'instant'});
 }
 
-function fillInput(text) {
-  document.getElementById('mainInput').value = text;
+document.getElementById('mainInput').addEventListener('input',function(){
   updateCharCount();
-  hideError();
-}
+  if(this.value.trim()) hideError();
+});
 
-function updateCharCount() {
-  const v = document.getElementById('mainInput').value;
-  document.getElementById('charCount').textContent = v.length;
-}
+/* ─── Tag Pool ─── */
+const TAG_POOL=[
+  {emoji:'🎒',label:'通勤包',text:'装书的通勤包，能放水杯，上班背'},
+  {emoji:'🧥',label:'针织毛衣',text:'秋季针织毛衣，宽松舒适'},
+  {emoji:'🎧',label:'蓝牙耳机',text:'办公室用的蓝牙耳机，降噪'},
+  {emoji:'🗂️',label:'桌面收纳',text:'桌面收纳好看又实用'},
+  {emoji:'🧣',label:'围巾',text:'冬天保暖的围巾，百搭'},
+  {emoji:'🧢',label:'鸭舌帽',text:'夏天遮阳的鸭舌帽，透气'},
+  {emoji:'👟',label:'运动鞋',text:'跑步穿的轻便运动鞋'},
+  {emoji:'👜',label:'小众包包',text:'有设计感的小众包包'},
+  {emoji:'🧴',label:'洗面奶',text:'温和不刺激的洗面奶'},
+  {emoji:'💄',label:'口红',text:'日常通勤用的口红'},
+  {emoji:'👓',label:'防蓝光镜',text:'防蓝光眼镜，看电脑用'},
+  {emoji:'⌚',label:'智能手表',text:'运动监测的智能手表'},
+  {emoji:'🛋️',label:'抱枕',text:'沙发靠背的抱枕，舒服'},
+  {emoji:'🛏️',label:'床品四件套',text:'纯棉床品四件套，亲肤'},
+  {emoji:'🪴',label:'绿植',text:'办公室放的小盆栽绿植'},
+  {emoji:'📚',label:'书架',text:'简约落地书架，实木'},
+  {emoji:'☕',label:'保温杯',text:'大容量保温杯，带茶隔'},
+  {emoji:'🔋',label:'充电宝',text:'大容量充电宝，快充'},
+  {emoji:'💡',label:'护眼台灯',text:'护眼台灯，学习用'},
+  {emoji:'🪥',label:'电动牙刷',text:'声波电动牙刷'},
+  {emoji:'🧤',label:'触屏手套',text:'冬天保暖手套，触屏可用'},
+  {emoji:'👗',label:'连衣裙',text:'夏季碎花连衣裙，显瘦'},
+  {emoji:'🎮',label:'游戏鼠标',text:'电竞游戏鼠标，灵敏'},
+  {emoji:'⌨️',label:'机械键盘',text:'静音机械键盘，办公用'},
+];
 
-function showError(message) {
-  const errorEl = document.getElementById('inputError');
-  errorEl.textContent = message;
-  errorEl.style.display = 'block';
-  document.getElementById('mainInput').style.borderColor = 'var(--accent)';
-}
-
-function hideError() {
-  document.getElementById('inputError').style.display = 'none';
-  document.getElementById('mainInput').style.borderColor = '';
-}
-
-function updateDots(step) {
-  [1, 2, 3].forEach(i => {
-    const d = document.getElementById('dot' + i);
-    d.className = 'step-dot';
-    if (i < step) d.classList.add('done');
-    else if (i === step) d.classList.add('active');
+let currentTagIndexes=[];
+function refreshTags(){
+  const row=document.getElementById('tagsRow');
+  const pool=[...Array(TAG_POOL.length).keys()];
+  currentTagIndexes=[];
+  for(let i=0;i<8&&pool.length>0;i++){
+    const r=Math.floor(Math.random()*pool.length);
+    currentTagIndexes.push(pool[r]); pool.splice(r,1);
+  }
+  row.innerHTML=currentTagIndexes.map(idx=>{
+    const t=TAG_POOL[idx];
+    return `<div class="tag-chip" onclick="fillInput('${t.text}')">${t.emoji} ${t.label}</div>`;
+  }).join('');
+  row.querySelectorAll('.tag-chip').forEach((c,i)=>{
+    c.style.opacity='0'; c.style.transform='translateY(8px)';
+    setTimeout(()=>{c.style.transition='all .3s ease';c.style.opacity='1';c.style.transform='translateY(0)';},i*45);
   });
 }
 
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  window.scrollTo(0, 0);
-}
-
-document.getElementById('mainInput').addEventListener('input', function() {
-  updateCharCount();
-  if (this.value.trim()) hideError();
-});
-
-// ============================================
-// Page 1: 输入页逻辑
-// ============================================
-async function goToPage2() {
-  const val = document.getElementById('mainInput').value.trim();
-
-  if (!val) {
-    showError('请先描述一下你想买什么～');
-    return;
-  }
-
-  state.input = val;
-  showPage('page2');
-  updateDots(2);
-
-  // 显示骨架屏
-  document.getElementById('questionsLoading').style.display = 'block';
-  document.getElementById('questionsContainer').style.display = 'none';
-
-  try {
-    // 调用AI生成动态问题
-    const response = await fetch(`${API_BASE}/api/ai/questions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userInput: val })
+/* ─── Page 1 → 2A ─── */
+async function goToPage2(){
+  const val=document.getElementById('mainInput').value.trim();
+  if(!val){ showError('请先描述一下你想买什么～'); return; }
+  state.input=val; state.q1Answer=[]; state.q2Answer=[];
+  showPage('page2a'); updateDots(2);
+  document.getElementById('q1Loading').style.display='block';
+  document.getElementById('q1Container').style.display='none';
+  document.getElementById('nextToQ2Btn').disabled=true;
+  try{
+    const res=await fetch(`${API_BASE}/api/ai/questions`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({userInput:val,questionNumber:1})
     });
-
-    const data = await response.json();
-    state.questions = data.questions;
-
-    // 渲染动态问题
-    renderQuestions(data.questions);
-
-    if (data.fallback) {
-      showToast('使用预设问题');
-    }
-  } catch (error) {
-    console.error('获取问题失败:', error);
-    // 使用本地fallback
-    const fallbackQuestions = getLocalFallback(val);
-    state.questions = fallbackQuestions;
-    renderQuestions(fallbackQuestions);
+    const data=await res.json();
+    state.question1=data.question||data.questions?.[0];
+    renderQ1(state.question1);
+    if(data.fallback) showToast('使用预设问题');
+  }catch(e){
+    const fb=getLocalFallbackQ1(val);
+    state.question1=fb; renderQ1(fb);
     showToast('网络问题，使用预设问题');
   }
 }
 
-// 本地Fallback问题
-function getLocalFallback(userInput) {
-  const categoryQuestions = {
-    '包': {
-      question: "你更喜欢哪种包的风格？",
-      options: [
-        { emoji: "🎒", label: "简约通勤", desc: "黑白灰，上班百搭", value: "简约通勤" },
-        { emoji: "👜", label: "时尚轻熟", desc: "设计感，约会首选", value: "时尚轻熟" },
-        { emoji: "💼", label: "商务正式", desc: "皮质，有气场", value: "商务正式" },
-        { emoji: "🏕️", label: "休闲运动", desc: "轻便，实用主义", value: "休闲运动" }
-      ]
-    },
-    '衣': {
-      question: "你喜欢什么版型风格？",
-      options: [
-        { emoji: "🧥", label: "宽松慵懒", desc: "oversize，舒适随性", value: "宽松慵懒" },
-        { emoji: "👔", label: "修身合体", desc: "显身材，有精神", value: "修身合体" },
-        { emoji: "🧣", label: "文艺复古", desc: "有质感，显品味", value: "文艺复古" },
-        { emoji: "🎽", label: "简约基础", desc: "百搭款，不出错", value: "简约基础" }
-      ]
-    },
-    '耳机': {
-      question: "你更注重哪方面？",
-      options: [
-        { emoji: "🎵", label: "音质优先", desc: "听感第一", value: "音质优先" },
-        { emoji: "🔇", label: "降噪功能", desc: "安静沉浸", value: "降噪功能" },
-        { emoji: "⏱️", label: "续航持久", desc: "电量焦虑", value: "续航持久" },
-        { emoji: "💎", label: "外观颜值", desc: "好看重要", value: "外观颜值" }
-      ]
-    }
+function getLocalFallbackQ1(userInput){
+  const map={
+    '包':{question:'想要什么价位的包？或者偏好什么款式？',options:[
+      {emoji:'💰',label:'25元以内',desc:'超实惠',value:'PRICE:0-25'},
+      {emoji:'💵',label:'25-50元',desc:'平价实用',value:'PRICE:25-50'},
+      {emoji:'💳',label:'50-100元',desc:'质价比',value:'PRICE:50-100'},
+      {emoji:'🎒',label:'双肩包',desc:'容量大',value:'双肩包'},
+      {emoji:'👜',label:'单肩包',desc:'通勤百搭',value:'单肩包'},
+      {emoji:'🎎',label:'帆布包',desc:'文艺清新',value:'帆布包'},
+      {emoji:'👜',label:'托特包',desc:'A4可放',value:'托特包'},
+    ]},
+    '衣':{question:'衣服预算多少？喜欢什么版型？',options:[
+      {emoji:'💰',label:'30元以内',desc:'超便宜',value:'PRICE:0-30'},
+      {emoji:'💵',label:'30-80元',desc:'平价好穿',value:'PRICE:30-80'},
+      {emoji:'💳',label:'80-150元',desc:'品质款',value:'PRICE:80-150'},
+      {emoji:'🧥',label:'宽松',desc:'舒适随性',value:'宽松'},
+      {emoji:'👔',label:'修身',desc:'显瘦精神',value:'修身'},
+      {emoji:'🎽',label:'短款',desc:'显腿长',value:'短款'},
+      {emoji:'🧥',label:'长款',desc:'保暖实用',value:'长款'},
+    ]},
+    '耳机':{question:'耳机预算多少？想要什么类型？',options:[
+      {emoji:'💰',label:'20元以内',desc:'入门级',value:'PRICE:0-20'},
+      {emoji:'💵',label:'20-80元',desc:'性价比',value:'PRICE:20-80'},
+      {emoji:'💳',label:'80-200元',desc:'进阶款',value:'PRICE:80-200'},
+      {emoji:'🎧',label:'入耳式',desc:'轻便便携',value:'入耳式'},
+      {emoji:'🎵',label:'头戴式',desc:'音质好',value:'头戴式'},
+      {emoji:'🔄',label:'蓝牙',desc:'无线方便',value:'蓝牙'},
+      {emoji:'🔌',label:'有线',desc:'稳定可靠',value:'有线'},
+    ]},
+    '帽':{question:'帽子预算多少？喜欢什么款式？',options:[
+      {emoji:'💰',label:'15元以内',desc:'超实惠',value:'PRICE:0-15'},
+      {emoji:'💵',label:'15-40元',desc:'平价百搭',value:'PRICE:15-40'},
+      {emoji:'💳',label:'40-80元',desc:'品质款',value:'PRICE:40-80'},
+      {emoji:'🧢',label:'鸭舌帽',desc:'休闲运动',value:'鸭舌帽'},
+      {emoji:'🎒',label:'渔夫帽',desc:'遮阳显瘦',value:'渔夫帽'},
+      {emoji:'🧶',label:'毛线帽',desc:'保暖秋冬',value:'毛线帽'},
+      {emoji:'👒',label:'贝雷帽',desc:'文艺气质',value:'贝雷帽'},
+    ]},
+    '鞋':{question:'鞋子预算多少？喜欢什么类型？',options:[
+      {emoji:'💰',label:'30元以内',desc:'超实惠',value:'PRICE:0-30'},
+      {emoji:'💵',label:'30-80元',desc:'平价好穿',value:'PRICE:30-80'},
+      {emoji:'💳',label:'80-200元',desc:'品质款',value:'PRICE:80-200'},
+      {emoji:'👟',label:'运动鞋',desc:'百搭舒适',value:'运动鞋'},
+      {emoji:'🩰',label:'平底鞋',desc:'日常通勤',value:'平底鞋'},
+      {emoji:'🥾',label:'板鞋',desc:'休闲百搭',value:'板鞋'},
+      {emoji:'👞',label:'帆布鞋',desc:'青春活力',value:'帆布鞋'},
+    ]},
   };
+  for(const[k,v] of Object.entries(map)) if(userInput.includes(k)) return v;
+  return{question:'预算大概多少？想要什么类型？',options:[
+    {emoji:'💰',label:'30元以内',desc:'超实惠',value:'PRICE:0-30'},
+    {emoji:'💵',label:'30-80元',desc:'平价好用',value:'PRICE:30-80'},
+    {emoji:'💳',label:'80-200元',desc:'品质优先',value:'PRICE:80-200'},
+    {emoji:'🎨',label:'简约风',desc:'百搭不出错',value:'简约'},
+    {emoji:'🌸',label:'甜美风',desc:'可爱减龄',value:'甜美'},
+    {emoji:'🖤',label:'酷帅风',desc:'个性街头',value:'酷帅'},
+    {emoji:'✨',label:'品质款',desc:'用料扎实',value:'品质'},
+  ]};
+}
+
+let q1AllOptions=[],q1DisplayIndexes=[],q1SelectedIndexes=[];
+const OPTIONS_PER_PAGE=8;
+
+function renderQ1(qData){
+  q1AllOptions=qData.options||[];
+  q1DisplayIndexes=[];q1SelectedIndexes=[];
+  document.getElementById('q1Text').innerHTML=`<div class="q-num">1</div>${qData.question}`;
+  refreshQ1Options();
+  document.getElementById('q1Loading').style.display='none';
+  document.getElementById('q1Container').style.display='block';
+}
+function refreshQ1Options(){
+  if(!q1AllOptions.length) return;
+  const row=document.getElementById('q1OptionsRow');
+  if(q1AllOptions.length<=OPTIONS_PER_PAGE){
+    q1DisplayIndexes=[...Array(q1AllOptions.length).keys()];
+  } else {
+    const sel=new Set(q1SelectedIndexes);
+    const avail=[...Array(q1AllOptions.length).keys()].filter(i=>!sel.has(i));
+    q1DisplayIndexes=[...q1SelectedIndexes];
+    const need=OPTIONS_PER_PAGE-q1DisplayIndexes.length;
+    for(let i=0;i<need&&avail.length>0;i++){
+      const r=Math.floor(Math.random()*avail.length);
+      q1DisplayIndexes.push(avail[r]); avail.splice(r,1);
+    }
+  }
+  row.innerHTML=q1DisplayIndexes.map(idx=>{
+    const o=q1AllOptions[idx],sel=q1SelectedIndexes.includes(idx);
+    return`<div class="q-option-tag${sel?' selected':''}" onclick="selectQ1Option(${idx})" data-index="${idx}">
+      <span class="q-option-emoji">${o.emoji}</span>
+      <span class="q-option-label">${o.label}</span>
+      ${o.desc?`<span class="q-option-desc">${o.desc}</span>`:''}
+    </div>`;
+  }).join('');
+  animateIn(row);
+}
+function animateIn(row){
+  row.querySelectorAll('.q-option-tag,.tag-chip').forEach((el,i)=>{
+    el.style.opacity='0'; el.style.transform='translateY(8px)';
+    setTimeout(()=>{el.style.transition='all .28s ease';el.style.opacity='1';el.style.transform='translateY(0)';},i*38);
+  });
+}
+function selectQ1Option(idx){
+  const pos=q1SelectedIndexes.indexOf(idx);
+  pos>-1 ? q1SelectedIndexes.splice(pos,1) : q1SelectedIndexes.push(idx);
+  state.q1Answer=q1SelectedIndexes.map(i=>q1AllOptions[i].value);
+  document.querySelectorAll('#q1OptionsRow .q-option-tag').forEach(t=>{
+    t.classList.toggle('selected',q1SelectedIndexes.includes(parseInt(t.dataset.index)));
+  });
+  document.getElementById('nextToQ2Btn').disabled=q1SelectedIndexes.length===0;
+}
+function goToPage1(){
+  showPage('page1'); updateDots(1);
+  state.q1Answer=[];state.q2Answer=[];state.question1=null;state.question2=null;
+  q1SelectedIndexes=[];q2SelectedIndexes=[];
+}
+
+/* ─── 2A → 2B ─── */
+async function goToPage2B(){
+  if(!state.q1Answer.length){ showToast('请至少选择一个标签'); return; }
+  showPage('page2b'); updateDots(3);
+  document.getElementById('q2Loading').style.display='block';
+  document.getElementById('q2Container').style.display='none';
+  document.getElementById('searchBtn').disabled=true;
+  try{
+    const res=await fetch(`${API_BASE}/api/ai/question2`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({userInput:state.input,q1Answers:state.q1Answer})
+    });
+    if(!res.ok) throw new Error('API error');
+    const data=await res.json();
+    if(!data.question) throw new Error('No question');
+    state.question2=data.question; renderQ2(state.question2);
+  }catch(e){
+    console.error('获取问题二失败:', e);
+    const fb=getLocalFallbackQ2(state.input,state.q1Answer);
+    state.question2=fb; renderQ2(fb);
+    showToast('使用预设问题');
+  }
+}
+function getLocalFallbackQ2(userInput,q1Answers){
+  // 提取非价格标签
+  const nonPriceTags=(q1Answers||[]).filter(a=>a&&!a.startsWith('PRICE:'));
+  const firstTag=nonPriceTags[0]||'';
+
+  // 构建场景选项
+  const scenes=[
+    {emoji:'💼',label:'通勤',desc:'上班日常',value:'通勤'},{emoji:'🏃',label:'运动',desc:'健身户外',value:'运动'},
+    {emoji:'🎒',label:'学生',desc:'校园使用',value:'学生'},{emoji:'🎁',label:'送礼',desc:'送人有面子',value:'送礼'},
+    {emoji:'🛏️',label:'居家',desc:'日常舒适',value:'居家'},{emoji:'🎉',label:'聚会',desc:'派对活动',value:'聚会'}
+  ];
+
+  // 构建风格选项
+  const styles=[
+    {emoji:'🤍',label:'简约',desc:'百搭不出错',value:'简约'},{emoji:'🌸',label:'甜美',desc:'少女风',value:'甜美'},
+    {emoji:'🖤',label:'酷帅',desc:'个性街头',value:'酷帅'},{emoji:'🌿',label:'文艺',desc:'气质独特',value:'文艺'},
+    {emoji:'✨',label:'质感',desc:'高级精致',value:'质感'},{emoji:'🎀',label:'可爱',desc:'萌系减龄',value:'可爱'}
+  ];
 
   // 检测品类
-  for (const [keyword, questionData] of Object.entries(categoryQuestions)) {
-    if (userInput.includes(keyword)) {
-      return [
-        questionData,
-        {
-          question: "你的预算大概是？",
-          options: [
-            { emoji: "💰", label: "25元以内", desc: "超实惠，够用就好", value: "25元以内" },
-            { emoji: "💵", label: "25-50元", desc: "平价实用，性价比高", value: "25-50元" },
-            { emoji: "💳", label: "50-150元", desc: "质价比优先", value: "50-150元" },
-            { emoji: "🎁", label: "150-300元", desc: "品质与颜值兼顾", value: "150-300元" },
-            { emoji: "✨", label: "300元以上", desc: "好设计值得投资", value: "300元以上" }
-          ]
-        }
-      ];
-    }
+  const cats={'包':'背包','衣':'衣服','鞋':'鞋子','帽':'帽子','耳机':'耳机'};
+  let cat='商品';
+  for(const[k,v] of Object.entries(cats)) if(userInput.includes(k)){ cat=v; break; }
+
+  // 根据是否有非价格标签决定问题类型
+  if(firstTag){
+    // 如果问题一有选风格，问题二问场景
+    return{question:`既然想要${firstTag}风格的${cat}，主要用于什么场景？`,options:scenes};
+  }else{
+    // 如果问题一只有价格，问题二问风格
+    return{question:`想要什么样的${cat}风格？`,options:styles};
   }
-
-  // 默认问题
-  return [
-    {
-      question: "你更喜欢哪种整体风格？",
-      options: [
-        { emoji: "🤍", label: "简约低调", desc: "黑白灰，极简线条", value: "简约低调" },
-        { emoji: "🌸", label: "轻熟活力", desc: "马卡龙色，甜而不腻", value: "轻熟活力" },
-        { emoji: "💼", label: "商务干练", desc: "皮质感，正式有气场", value: "商务干练" },
-        { emoji: "🌿", label: "自然慵懒", desc: "大地色，舒适随性", value: "自然慵懒" }
-      ]
-    },
-    {
-      question: "你的预算大概是？",
-      options: [
-        { emoji: "💰", label: "25元以内", desc: "超实惠，够用就好", value: "25元以内" },
-        { emoji: "💵", label: "25-50元", desc: "平价实用，性价比高", value: "25-50元" },
-        { emoji: "💳", label: "50-150元", desc: "质价比优先", value: "50-150元" },
-        { emoji: "🎁", label: "150-300元", desc: "品质与颜值兼顾", value: "150-300元" },
-        { emoji: "✨", label: "300元以上", desc: "好设计值得投资", value: "300元以上" }
-      ]
-    }
-  ];
 }
 
-// 渲染动态问题
-function renderQuestions(questions) {
-  const container = document.getElementById('questionsContainer');
-  container.innerHTML = '';
-
-  questions.forEach((q, qIndex) => {
-    const block = document.createElement('div');
-    block.className = 'question-block';
-    block.innerHTML = `
-      <div class="question-text">
-        <div class="q-num">${qIndex + 1}</div>
-        ${q.question}
-      </div>
-      <div class="options-grid" id="options${qIndex}">
-        ${q.options.map((opt, optIndex) => `
-          <div class="option-card" onclick="selectOption(${qIndex}, ${optIndex}, '${opt.value}')" data-value="${opt.value}">
-            <div class="option-emoji">${opt.emoji}</div>
-            <div class="option-label">${opt.label}</div>
-            <div class="option-desc">${opt.desc}</div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-    container.appendChild(block);
-  });
-
-  // 隐藏骨架屏，显示问题
-  document.getElementById('questionsLoading').style.display = 'none';
-  container.style.display = 'block';
+let q2AllOptions=[],q2DisplayIndexes=[],q2SelectedIndexes=[];
+function renderQ2(qData){
+  q2AllOptions=qData.options||[];q2DisplayIndexes=[];q2SelectedIndexes=[];
+  document.getElementById('q2Text').innerHTML=`<div class="q-num">2</div>${qData.question}`;
+  refreshQ2Options();
+  document.getElementById('q2Loading').style.display='none';
+  document.getElementById('q2Container').style.display='block';
 }
-
-// 选择选项
-function selectOption(questionIndex, optionIndex, value) {
-  // 更新UI
-  const optionsGrid = document.getElementById(`options${questionIndex}`);
-  optionsGrid.querySelectorAll('.option-card').forEach((card, idx) => {
-    card.classList.toggle('selected', idx === optionIndex);
-  });
-
-  // 更新状态
-  if (questionIndex === 0) {
-    state.q1Answer = value;
+function refreshQ2Options(){
+  if(!q2AllOptions.length) return;
+  const row=document.getElementById('q2OptionsRow');
+  if(q2AllOptions.length<=OPTIONS_PER_PAGE){
+    q2DisplayIndexes=[...Array(q2AllOptions.length).keys()];
   } else {
-    state.q2Answer = value;
+    const sel=new Set(q2SelectedIndexes);
+    const avail=[...Array(q2AllOptions.length).keys()].filter(i=>!sel.has(i));
+    q2DisplayIndexes=[...q2SelectedIndexes];
+    const need=OPTIONS_PER_PAGE-q2DisplayIndexes.length;
+    for(let i=0;i<need&&avail.length>0;i++){
+      const r=Math.floor(Math.random()*avail.length);
+      q2DisplayIndexes.push(avail[r]); avail.splice(r,1);
+    }
   }
-
-  // 检查是否可以激活搜索按钮
-  checkEnableSearch();
+  row.innerHTML=q2DisplayIndexes.map(idx=>{
+    const o=q2AllOptions[idx],sel=q2SelectedIndexes.includes(idx);
+    return`<div class="q-option-tag${sel?' selected':''}" onclick="selectQ2Option(${idx})" data-index="${idx}">
+      <span class="q-option-emoji">${o.emoji}</span>
+      <span class="q-option-label">${o.label}</span>
+      ${o.desc?`<span class="q-option-desc">${o.desc}</span>`:''}
+    </div>`;
+  }).join('');
+  animateIn(row);
+}
+function selectQ2Option(idx){
+  const pos=q2SelectedIndexes.indexOf(idx);
+  pos>-1 ? q2SelectedIndexes.splice(pos,1) : q2SelectedIndexes.push(idx);
+  state.q2Answer=q2SelectedIndexes.map(i=>q2AllOptions[i].value);
+  document.querySelectorAll('#q2OptionsRow .q-option-tag').forEach(t=>{
+    t.classList.toggle('selected',q2SelectedIndexes.includes(parseInt(t.dataset.index)));
+  });
+  document.getElementById('searchBtn').disabled=q2SelectedIndexes.length===0;
+}
+function goToPage2A(){
+  showPage('page2a'); updateDots(2);
+  state.q2Answer=[]; q2SelectedIndexes=[];
 }
 
-function checkEnableSearch() {
-  const btn = document.getElementById('searchBtn');
-  if (state.q1Answer && state.q2Answer) {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    btn.style.pointerEvents = 'auto';
-  }
-}
-
-function goToPage1() {
-  showPage('page1');
-  updateDots(1);
-  // 重置Page2状态
-  state.q1Answer = null;
-  state.q2Answer = null;
-  const btn = document.getElementById('searchBtn');
-  btn.disabled = true;
-  btn.style.opacity = '0.4';
-  btn.style.pointerEvents = 'none';
-}
-
-// ============================================
-// Page 2: 开始搜索
-// ============================================
-async function startSearch() {
-  // 显示Loading
+/* ─── Search ─── */
+async function startSearch(){
+  if(!state.q1Answer.length||!state.q2Answer.length){ showToast('请至少完成两道问题的选择'); return; }
   document.getElementById('loadingScreen').classList.add('show');
-
-  try {
-    // 调用推荐接口
-    const response = await fetch(`${API_BASE}/api/ai/recommend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userInput: state.input,
-        q1Answer: state.q1Answer,
-        q2Answer: state.q2Answer
-      })
+  try{
+    const res=await fetch(`${API_BASE}/api/ai/recommend`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({userInput:state.input,q1Answers:state.q1Answer,q2Answers:state.q2Answer})
     });
-
-    const data = await response.json();
-
-    // 保存商品数据
-    state.products = data.products;
-
-    // 构建结果页
-    buildResultPage(data.styleProfile, data.products);
-
-    // 显示结果页
+    const data=await res.json();
+    state.products=data.products;
+    buildResultPage(data.styleProfile,data.products);
     document.getElementById('loadingScreen').classList.remove('show');
-    showPage('page3');
-    updateDots(3);
-
-  } catch (error) {
-    console.error('推荐失败:', error);
-    // 使用本地模拟数据
-    const mockData = getLocalMockData();
-    state.products = mockData.products;
-    buildResultPage(mockData.styleProfile, mockData.products);
+    showPage('page3'); updateDots(4);
+  }catch(e){
+    const mock=getLocalMockData();
+    state.products=mock.products;
+    buildResultPage(mock.styleProfile,mock.products);
     document.getElementById('loadingScreen').classList.remove('show');
-    showPage('page3');
-    updateDots(3);
+    showPage('page3'); updateDots(4);
     showToast('使用离线数据');
   }
 }
 
-// 构建结果页
-function buildResultPage(styleProfile, products) {
-  // 风格总结卡片
-  document.getElementById('styleName').textContent = styleProfile.name;
-  document.getElementById('styleDesc').textContent = styleProfile.desc;
-
-  const tagsEl = document.getElementById('styleTags');
-  tagsEl.innerHTML = '';
-  styleProfile.tags.forEach(t => {
-    const span = document.createElement('span');
-    span.className = 'style-tag';
-    span.textContent = t;
-    tagsEl.appendChild(span);
-  });
-
-  // 渲染商品
+function buildResultPage(sp,products){
+  document.getElementById('styleName').textContent=sp.name;
+  document.getElementById('styleDesc').textContent=sp.desc;
+  const te=document.getElementById('styleTags');
+  te.innerHTML=sp.tags.map(t=>`<span class="style-tag">${t}</span>`).join('');
   renderProducts('all');
 }
 
-// 渲染商品列表
-function renderProducts(filter) {
-  const grid = document.getElementById('productsGrid');
-  const emptyState = document.getElementById('emptyState');
-
-  const filtered = filter === 'all' ? state.products : state.products.filter(p => p.platform === filter);
-  document.getElementById('resultCount').textContent = filtered.length;
-
-  if (filtered.length === 0) {
-    grid.style.display = 'none';
-    emptyState.style.display = 'block';
-    return;
-  }
-
-  grid.style.display = 'grid';
-  emptyState.style.display = 'none';
-
-  grid.innerHTML = '';
-  filtered.forEach(p => {
-    const div = document.createElement('div');
-    div.className = 'prod-card';
-    div.innerHTML = `
+function renderProducts(filter){
+  const grid=document.getElementById('productsGrid');
+  const empty=document.getElementById('emptyState');
+  const filtered=filter==='all'?state.products:state.products.filter(p=>p.platform===filter);
+  document.getElementById('resultCount').textContent=filtered.length;
+  if(!filtered.length){ grid.style.display='none'; empty.style.display='block'; return; }
+  grid.style.display='grid'; empty.style.display='none';
+  grid.innerHTML='';
+  filtered.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='prod-card';
+    div.innerHTML=`
       <div class="prod-img-wrap">
-        <img class="prod-img" src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23EDE9E1%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%239A9082%22 font-size=%2212%22>暂无图片</text></svg>'">
+        <img class="prod-img" src="${p.img}" alt="${p.name}" loading="lazy"
+          onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23EDE9E1%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%239A9082%22 font-size=%2211%22>暂无图片</text></svg>'">
         <span class="prod-platform-badge ${p.badgeClass}">${p.platformLabel}</span>
-        <span class="prod-score">⭐ ${p.score || p.aiScore}</span>
+        <span class="prod-score">⭐ ${p.score||p.aiScore}</span>
       </div>
       <div class="prod-info">
         <div class="prod-name">${p.name}</div>
-        <div class="prod-reason">${p.reason || p.aiReason}</div>
+        <div class="prod-reason">${p.reason||p.aiReason}</div>
         <div class="prod-bottom">
           <div>
             <div class="prod-price">¥${p.price}</div>
@@ -1191,175 +1270,85 @@ function renderProducts(filter) {
           </div>
           <button class="prod-buy-btn">查看</button>
         </div>
-      </div>
-    `;
-    div.onclick = (e) => {
-      if (!e.target.classList.contains('prod-buy-btn')) {
-        openModal(p);
-      }
-    };
-    div.querySelector('.prod-buy-btn').onclick = (e) => {
-      e.stopPropagation();
-      openModal(p);
-    };
+      </div>`;
+    div.onclick=(e)=>{ if(!e.target.classList.contains('prod-buy-btn')) openModal(p); };
+    div.querySelector('.prod-buy-btn').onclick=(e)=>{ e.stopPropagation(); openModal(p); };
     grid.appendChild(div);
   });
 }
 
-// 平台筛选
-function filterPlatform(el, val) {
-  document.querySelectorAll('.pt-tab').forEach(t => t.classList.remove('active'));
+function filterPlatform(el,val){
+  document.querySelectorAll('.pt-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  state.currentFilter = val;
+  state.currentFilter=val;
   renderProducts(val);
 }
 
-// 本地模拟数据
-function getLocalMockData() {
-  const styleMap = {
-    '简约低调': { name: '简约低调 · 极简风', desc: '偏爱干净利落的设计，黑白灰配色，少即是多的美学。', tags: ['#极简', '#黑白灰', '#耐看'] },
-    '轻熟活力': { name: '轻熟活力 · 通勤风', desc: '喜欢有点甜又不失成熟感的风格，注重功能与颜值兼顾。', tags: ['#马卡龙', '#轻熟', '#活力'] },
-    '商务干练': { name: '商务干练 · 职场风', desc: '注重品质和专业感，皮质细节加分，适合正式场合。', tags: ['#皮质感', '#专业', '#商务'] },
-    '自然慵懒': { name: '自然慵懒 · 原野风', desc: '大地色系，棉麻材质，随性舒适不刻意。', tags: ['#大地色', '#棉麻', '#慵懒'] }
+function getLocalMockData(){
+  const styleMap={
+    '简约低调':{name:'简约低调 · 极简风',desc:'偏爱干净利落的设计，黑白灰配色，少即是多的美学。',tags:['#极简','#黑白灰','#耐看']},
+    '轻熟活力':{name:'轻熟活力 · 通勤风',desc:'喜欢有点甜又不失成熟感的风格，注重功能与颜值兼顾。',tags:['#马卡龙','#轻熟','#活力']},
   };
-
-  // 根据预算确定价格范围
-  const budgetPrices = {
-    '25元以内': { min: 10, max: 24 },
-    '25-50元': { min: 26, max: 49 },
-    '50元以内': { min: 15, max: 49 },
-    '50-150元': { min: 55, max: 148 },
-    '150-300元': { min: 155, max: 298 },
-    '300元以上': { min: 305, max: 600 }
-  };
-  const priceRange = budgetPrices[state.q2Answer] || budgetPrices['50-150元'];
-
-  const s = styleMap[state.q1Answer] || styleMap['简约低调'];
-  const styleProfile = {
-    name: s.name + ' · 预算' + state.q2Answer,
-    desc: s.desc,
-    tags: [...s.tags, '预算' + state.q2Answer]
-  };
-
-  // 根据预算范围生成随机价格
-  const getRandomPrice = () => Math.floor(Math.random() * (priceRange.max - priceRange.min) + priceRange.min);
-
-  const products = [
-    {
-      id: 1, platform: 'pdd', platformLabel: '拼多多', badgeClass: 'badge-pdd',
-      name: '简约大容量帆布托特包 A4装书通勤包',
-      img: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&q=80',
-      price: String(getRandomPrice()), priceOri: '128', score: '9.4', sales: '3.2万',
-      reason: '大容量A4可放，侧边杯套设计，上班通勤颜值在线',
-      url: '#'
-    },
-    {
-      id: 2, platform: 'tb', platformLabel: '淘宝', badgeClass: 'badge-tb',
-      name: '马卡龙色帆布包女大学生书包手提单肩两用',
-      img: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80',
-      price: String(getRandomPrice()), priceOri: '159', score: '9.1', sales: '1.8万',
-      reason: '马卡龙粉绿双色，轻熟感十足，可单肩可手提',
-      url: '#'
-    },
-    {
-      id: 3, platform: '1688', platformLabel: '1688', badgeClass: 'badge-1688',
-      name: '工厂直供 帆布托特包 定制款大容量女包',
-      img: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80',
-      price: String(getRandomPrice()), priceOri: '80', score: '8.7', sales: '5.6万',
-      reason: '工厂直供价格极低，同款市场价80+',
-      url: '#'
-    },
-    {
-      id: 4, platform: 'pdd', platformLabel: '拼多多', badgeClass: 'badge-pdd',
-      name: '尼龙轻便双肩包 防水大容量 学生通勤两用',
-      img: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80',
-      price: String(getRandomPrice()), priceOri: '198', score: '9.3', sales: '2.1万',
-      reason: '防水面料好打理，双肩减压，装书本电脑都够用',
-      url: '#'
-    },
-    {
-      id: 5, platform: 'tb', platformLabel: '淘宝', badgeClass: 'badge-tb',
-      name: 'ins风帆布单肩包 文艺小清新女生书包',
-      img: 'https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?w=400&q=80',
-      price: String(getRandomPrice()), priceOri: '139', score: '9.0', sales: '8800',
-      reason: 'ins风文艺感，粉绿配色可选，轻盈不压肩',
-      url: '#'
-    },
-    {
-      id: 6, platform: '1688', platformLabel: '1688', badgeClass: 'badge-1688',
-      name: '韩版帆布手提包 大号 学生上班购物袋',
-      img: 'https://images.unsplash.com/photo-1575032617751-6ddec2089882?w=400&q=80',
-      price: String(getRandomPrice()), priceOri: '65', score: '8.5', sales: '9.3万',
-      reason: '超高性价比，1688厂家直供，颜色多款可选',
-      url: '#'
-    }
+  const budgetPrices={'25元以内':{min:10,max:24},'25-50元':{min:26,max:49},'50-100元':{min:52,max:98},'50-150元':{min:55,max:148}};
+  let pr={min:30,max:120};
+  for(const a of (state.q1Answer||[])) if(budgetPrices[a]){pr=budgetPrices[a];break;}
+  const rp=()=>Math.floor(Math.random()*(pr.max-pr.min)+pr.min);
+  let sp=styleMap['轻熟活力'];
+  for(const a of (state.q1Answer||[])) if(styleMap[a]){sp=styleMap[a];break;}
+  const styleProfile={name:sp.name,desc:sp.desc,tags:sp.tags};
+  const products=[
+    {id:1,platform:'pdd',platformLabel:'拼多多',badgeClass:'badge-pdd',name:'简约大容量帆布托特包 A4装书通勤包',img:'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&q=80',price:String(rp()),priceOri:'128',score:'9.4',sales:'3.2万',reason:'大容量A4可放，侧边杯套设计，上班通勤颜值在线',url:'#'},
+    {id:2,platform:'tb',platformLabel:'淘宝',badgeClass:'badge-tb',name:'马卡龙色帆布包女大学生书包手提单肩两用',img:'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80',price:String(rp()),priceOri:'159',score:'9.1',sales:'1.8万',reason:'马卡龙粉绿双色，轻熟感十足，可单肩可手提',url:'#'},
+    {id:3,platform:'1688',platformLabel:'1688',badgeClass:'badge-1688',name:'工厂直供 帆布托特包 定制款大容量女包',img:'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80',price:String(rp()),priceOri:'80',score:'8.7',sales:'5.6万',reason:'工厂直供价格极低，同款市场价80+',url:'#'},
+    {id:4,platform:'pdd',platformLabel:'拼多多',badgeClass:'badge-pdd',name:'尼龙轻便双肩包 防水大容量 学生通勤两用',img:'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80',price:String(rp()),priceOri:'198',score:'9.3',sales:'2.1万',reason:'防水面料好打理，双肩减压，装书本电脑都够用',url:'#'},
+    {id:5,platform:'tb',platformLabel:'淘宝',badgeClass:'badge-tb',name:'ins风帆布单肩包 文艺小清新女生书包',img:'https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?w=400&q=80',price:String(rp()),priceOri:'139',score:'9.0',sales:'8800',reason:'ins风文艺感，粉绿配色可选，轻盈不压肩',url:'#'},
+    {id:6,platform:'1688',platformLabel:'1688',badgeClass:'badge-1688',name:'韩版帆布手提包 大号 学生上班购物袋',img:'https://images.unsplash.com/photo-1575032617751-6ddec2089882?w=400&q=80',price:String(rp()),priceOri:'65',score:'8.5',sales:'9.3万',reason:'超高性价比，1688厂家直供，颜色多款可选',url:'#'},
   ];
-
-  return { styleProfile, products };
+  return{styleProfile,products};
 }
 
-// ============================================
-// 商品详情弹层
-// ============================================
-function openModal(p) {
-  document.getElementById('modalImg').src = p.img;
-  document.getElementById('modalName').textContent = p.name;
-  document.getElementById('modalReason').textContent = p.reason || p.aiReason || '符合你的风格偏好，性价比高';
-  document.getElementById('modalSales').textContent = p.sales || '1万+';
-  document.getElementById('modalScore').textContent = (p.score || p.aiScore) + ' 分';
-  document.getElementById('modalPrice').textContent = '¥' + p.price;
-  document.getElementById('modalPriceOri').textContent = '原价 ¥' + p.priceOri;
-  document.getElementById('modalPlatform').innerHTML = `<span class="prod-platform-badge ${p.badgeClass}" style="position:static;display:inline-block">${p.platformLabel}</span>`;
-
-  document.getElementById('modalBuyBtn').onclick = async () => {
-    // 拼多多商品需要生成推广链接
-    if (p.platform === 'pdd' && p.url) {
-      try {
-        const response = await fetch(`${API_BASE}/api/promotion/url`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ platform: 'pdd', goodsId: p.url })
-        });
-        const data = await response.json();
-        if (data.url) {
-          window.open(data.url, '_blank');
-          return;
-        }
-      } catch (e) {
-        console.error('获取推广链接失败:', e);
-      }
-      // 如果API失败，直接跳转拼多多商品页
-      window.open(`https://mobile.yangkeduo.com/goods.html?goods_sign=${p.url}`, '_blank');
-    } else if (p.url && p.url !== '#') {
-      window.open(p.url, '_blank');
-    } else {
-      showToast('购买链接开发中');
+/* ─── Modal ─── */
+function openModal(p){
+  document.getElementById('modalImg').src=p.img;
+  document.getElementById('modalName').textContent=p.name;
+  document.getElementById('modalReason').textContent=p.reason||p.aiReason||'符合你的风格偏好，性价比高';
+  document.getElementById('modalSales').textContent=p.sales||'1万+';
+  document.getElementById('modalScore').textContent=(p.score||p.aiScore)+' 分';
+  document.getElementById('modalPrice').textContent='¥'+p.price;
+  document.getElementById('modalPriceOri').textContent='原价 ¥'+p.priceOri;
+  document.getElementById('modalPlatform').innerHTML=`<span class="prod-platform-badge ${p.badgeClass}" style="position:static;display:inline-block">${p.platformLabel}</span>`;
+  document.getElementById('modalBuyBtn').onclick=async()=>{
+    if(p.platform==='pdd'&&p.url&&p.url!=='#'){
+      try{
+        const res=await fetch(`${API_BASE}/api/promotion/url`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({platform:'pdd',goodsId:p.url})});
+        const data=await res.json();
+        if(data.url&&data.url!=='#'){window.open(data.url,'_blank');return;}
+      }catch(e){}
+      // API调用失败，直接跳转到商品页
+      window.open(`https://mobile.yangkeduo.com/goods.html?goods_sign=${p.url}`,'_blank');
+    } else if(p.url&&p.url!=='#'){
+      window.open(p.url,'_blank');
     }
+    else showToast('购买链接开发中');
   };
-
   document.getElementById('overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  document.body.style.overflow='hidden';
 }
-
-function closeModal(e) {
-  if (e.target === document.getElementById('overlay')) {
+function closeModal(e){
+  if(e.target===document.getElementById('overlay')){
     document.getElementById('overlay').classList.remove('open');
-    document.body.style.overflow = '';
+    document.body.style.overflow='';
   }
 }
-
-// 点击关闭按钮
-document.querySelector('.modal-drag').addEventListener('click', () => {
+document.getElementById('modalHandle').addEventListener('click',()=>{
   document.getElementById('overlay').classList.remove('open');
-  document.body.style.overflow = '';
+  document.body.style.overflow='';
 });
 
-// ============================================
-// 初始化
-// ============================================
-document.addEventListener('DOMContentLoaded', () => {
+/* ─── Init ─── */
+document.addEventListener('DOMContentLoaded',()=>{
   updateCharCount();
-  console.log('PickAI 初始化完成');
+  refreshTags();
 });
 </script>
 </body>
