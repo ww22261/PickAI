@@ -874,6 +874,8 @@ let state = {
   input:'', question1:null, question2:null,
   q1Answer:[], q2Answer:[], products:[], currentFilter:'all'
 };
+// 请求追踪 ID，用于防止竞态条件
+let q1RequestId = 0, q2RequestId = 0;
 const API_BASE = window.location.hostname==='localhost' ? 'http://localhost:3000' : '';
 
 /* ─── Utils ─── */
@@ -973,16 +975,22 @@ async function goToPage2(){
   document.getElementById('q1Loading').style.display='block';
   document.getElementById('q1Container').style.display='none';
   document.getElementById('nextToQ2Btn').disabled=true;
+  // 生成新的请求 ID
+  const currentRequestId = ++q1RequestId;
   try{
     const res=await fetch(`${API_BASE}/api/ai/questions`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({userInput:val,questionNumber:1})
     });
     const data=await res.json();
+    // 检查是否是最新请求，防止竞态条件
+    if(currentRequestId !== q1RequestId) return;
     state.question1=data.question||data.questions?.[0];
     renderQ1(state.question1);
     if(data.fallback) showToast('使用预设问题');
   }catch(e){
+    // 检查是否是最新请求
+    if(currentRequestId !== q1RequestId) return;
     const fb=getLocalFallbackQ1(val);
     state.question1=fb; renderQ1(fb);
     showToast('网络问题，使用预设问题');
@@ -1056,13 +1064,17 @@ function renderQ1(qData){
   q1AllOptions=qData.options||[];
   q1DisplayIndexes=[];q1SelectedIndexes=[];
   document.getElementById('q1Text').innerHTML=`<div class="q-num">1</div>${qData.question}`;
-  refreshQ1Options();
+  // 直接设置显示索引并渲染，不发起额外的 API 请求
+  q1DisplayIndexes=[...Array(q1AllOptions.length).keys()];
+  renderQ1Options();
   document.getElementById('q1Loading').style.display='none';
   document.getElementById('q1Container').style.display='block';
 }
 async function refreshQ1Options(){
   // 收集当前显示的所有标签 value 作为 excludeTags
   const excludeTags = q1DisplayIndexes.map(idx => q1AllOptions[idx].value);
+  // 生成新的请求 ID
+  const currentRequestId = ++q1RequestId;
 
   try{
     const res=await fetch(`${API_BASE}/api/ai/questions`,{
@@ -1070,6 +1082,8 @@ async function refreshQ1Options(){
       body:JSON.stringify({userInput:state.input,questionNumber:1,excludeTags})
     });
     const data=await res.json();
+    // 检查是否是最新请求，防止竞态条件
+    if(currentRequestId !== q1RequestId) return;
     if(data.question && data.question.options){
       state.question1=data.question;
       q1AllOptions=data.question.options;
@@ -1077,6 +1091,8 @@ async function refreshQ1Options(){
       renderQ1Options();
     }
   }catch(e){
+    // 检查是否是最新请求
+    if(currentRequestId !== q1RequestId) return;
     console.error('刷新问题一失败:', e);
     // 失败时保持原有逻辑，本地随机
     if(!q1AllOptions.length) return;
@@ -1131,16 +1147,22 @@ async function goToPage2B(){
   document.getElementById('q2Loading').style.display='block';
   document.getElementById('q2Container').style.display='none';
   document.getElementById('searchBtn').disabled=true;
+  // 生成新的请求 ID
+  const currentRequestId = ++q2RequestId;
   try{
     const res=await fetch(`${API_BASE}/api/ai/question2`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({userInput:state.input,q1Answers:state.q1Answer})
     });
+    // 检查是否是最新请求，防止竞态条件
+    if(currentRequestId !== q2RequestId) return;
     if(!res.ok) throw new Error('API error');
     const data=await res.json();
     if(!data.question) throw new Error('No question');
     state.question2=data.question; renderQ2(state.question2);
   }catch(e){
+    // 检查是否是最新请求
+    if(currentRequestId !== q2RequestId) return;
     console.error('获取问题二失败:', e);
     const fb=getLocalFallbackQ2(state.input,state.q1Answer);
     state.question2=fb; renderQ2(fb);
@@ -1185,13 +1207,17 @@ let q2AllOptions=[],q2DisplayIndexes=[],q2SelectedIndexes=[];
 function renderQ2(qData){
   q2AllOptions=qData.options||[];q2DisplayIndexes=[];q2SelectedIndexes=[];
   document.getElementById('q2Text').innerHTML=`<div class="q-num">2</div>${qData.question}`;
-  refreshQ2Options();
+  // 直接设置显示索引并渲染，不发起额外的 API 请求
+  q2DisplayIndexes=[...Array(q2AllOptions.length).keys()];
+  renderQ2Options();
   document.getElementById('q2Loading').style.display='none';
   document.getElementById('q2Container').style.display='block';
 }
 async function refreshQ2Options(){
   // 收集当前显示的所有标签 value 作为 excludeTags
   const excludeTags = q2DisplayIndexes.map(idx => q2AllOptions[idx].value);
+  // 生成新的请求 ID
+  const currentRequestId = ++q2RequestId;
 
   try{
     const res=await fetch(`${API_BASE}/api/ai/question2`,{
@@ -1199,6 +1225,8 @@ async function refreshQ2Options(){
       body:JSON.stringify({userInput:state.input,q1Answers:state.q1Answer,excludeTags})
     });
     const data=await res.json();
+    // 检查是否是最新请求，防止竞态条件
+    if(currentRequestId !== q2RequestId) return;
     if(data.question && data.question.options){
       state.question2=data.question;
       q2AllOptions=data.question.options;
@@ -1206,6 +1234,8 @@ async function refreshQ2Options(){
       renderQ2Options();
     }
   }catch(e){
+    // 检查是否是最新请求
+    if(currentRequestId !== q2RequestId) return;
     console.error('刷新问题二失败:', e);
     // 失败时保持原有逻辑，本地随机
     if(!q2AllOptions.length) return;
