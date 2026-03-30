@@ -1060,12 +1060,26 @@ function renderQ1(qData){
   document.getElementById('q1Loading').style.display='none';
   document.getElementById('q1Container').style.display='block';
 }
-function refreshQ1Options(){
-  if(!q1AllOptions.length) return;
-  const row=document.getElementById('q1OptionsRow');
-  if(q1AllOptions.length<=OPTIONS_PER_PAGE){
-    q1DisplayIndexes=[...Array(q1AllOptions.length).keys()];
-  } else {
+async function refreshQ1Options(){
+  // 收集当前显示的所有标签 value 作为 excludeTags
+  const excludeTags = q1DisplayIndexes.map(idx => q1AllOptions[idx].value);
+
+  try{
+    const res=await fetch(`${API_BASE}/api/ai/questions`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({userInput:state.input,questionNumber:1,excludeTags})
+    });
+    const data=await res.json();
+    if(data.question && data.question.options){
+      state.question1=data.question;
+      q1AllOptions=data.question.options;
+      q1DisplayIndexes=[...Array(q1AllOptions.length).keys()];
+      renderQ1Options();
+    }
+  }catch(e){
+    console.error('刷新问题一失败:', e);
+    // 失败时保持原有逻辑，本地随机
+    if(!q1AllOptions.length) return;
     const sel=new Set(q1SelectedIndexes);
     const avail=[...Array(q1AllOptions.length).keys()].filter(i=>!sel.has(i));
     q1DisplayIndexes=[...q1SelectedIndexes];
@@ -1074,7 +1088,11 @@ function refreshQ1Options(){
       const r=Math.floor(Math.random()*avail.length);
       q1DisplayIndexes.push(avail[r]); avail.splice(r,1);
     }
+    renderQ1Options();
   }
+}
+function renderQ1Options(){
+  const row=document.getElementById('q1OptionsRow');
   row.innerHTML=q1DisplayIndexes.map(idx=>{
     const o=q1AllOptions[idx],sel=q1SelectedIndexes.includes(idx);
     return`<div class="q-option-tag${sel?' selected':''}" onclick="selectQ1Option(${idx})" data-index="${idx}">
@@ -1171,12 +1189,26 @@ function renderQ2(qData){
   document.getElementById('q2Loading').style.display='none';
   document.getElementById('q2Container').style.display='block';
 }
-function refreshQ2Options(){
-  if(!q2AllOptions.length) return;
-  const row=document.getElementById('q2OptionsRow');
-  if(q2AllOptions.length<=OPTIONS_PER_PAGE){
-    q2DisplayIndexes=[...Array(q2AllOptions.length).keys()];
-  } else {
+async function refreshQ2Options(){
+  // 收集当前显示的所有标签 value 作为 excludeTags
+  const excludeTags = q2DisplayIndexes.map(idx => q2AllOptions[idx].value);
+
+  try{
+    const res=await fetch(`${API_BASE}/api/ai/question2`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({userInput:state.input,q1Answers:state.q1Answer,excludeTags})
+    });
+    const data=await res.json();
+    if(data.question && data.question.options){
+      state.question2=data.question;
+      q2AllOptions=data.question.options;
+      q2DisplayIndexes=[...Array(q2AllOptions.length).keys()];
+      renderQ2Options();
+    }
+  }catch(e){
+    console.error('刷新问题二失败:', e);
+    // 失败时保持原有逻辑，本地随机
+    if(!q2AllOptions.length) return;
     const sel=new Set(q2SelectedIndexes);
     const avail=[...Array(q2AllOptions.length).keys()].filter(i=>!sel.has(i));
     q2DisplayIndexes=[...q2SelectedIndexes];
@@ -1185,7 +1217,11 @@ function refreshQ2Options(){
       const r=Math.floor(Math.random()*avail.length);
       q2DisplayIndexes.push(avail[r]); avail.splice(r,1);
     }
+    renderQ2Options();
   }
+}
+function renderQ2Options(){
+  const row=document.getElementById('q2OptionsRow');
   row.innerHTML=q2DisplayIndexes.map(idx=>{
     const o=q2AllOptions[idx],sel=q2SelectedIndexes.includes(idx);
     return`<div class="q-option-tag${sel?' selected':''}" onclick="selectQ2Option(${idx})" data-index="${idx}">

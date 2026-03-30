@@ -184,7 +184,7 @@ const CATEGORY_FALLBACKS = {
 // AI 动态问题生成接口 - 问题一
 // ============================================
 app.post('/api/ai/questions', async (req, res) => {
-  const { userInput, questionNumber } = req.body;
+  const { userInput, questionNumber, excludeTags } = req.body;
 
   if (!userInput || !userInput.trim()) {
     return res.status(400).json({ error: '请输入你想买什么' });
@@ -192,7 +192,7 @@ app.post('/api/ai/questions', async (req, res) => {
 
   // v1.5: 只生成问题一
   try {
-    const question = await generateQuestion1(userInput);
+    const question = await generateQuestion1(userInput, excludeTags || []);
     res.json({ question });
   } catch (error) {
     console.error('AI问题一生成失败:', error.message);
@@ -206,7 +206,7 @@ app.post('/api/ai/questions', async (req, res) => {
 // v1.5新增 - 支持多选标签数组
 // ============================================
 app.post('/api/ai/question2', async (req, res) => {
-  const { userInput, q1Answers } = req.body;
+  const { userInput, q1Answers, excludeTags } = req.body;
 
   if (!userInput || !userInput.trim()) {
     return res.status(400).json({ error: '请输入你想买什么' });
@@ -223,7 +223,7 @@ app.post('/api/ai/question2', async (req, res) => {
 
   try {
     // 调用DeepSeek API生成问题二，传入所有已选标签
-    const question = await generateQuestion2(userInput, answersArray);
+    const question = await generateQuestion2(userInput, answersArray, excludeTags || []);
     res.json({ question });
   } catch (error) {
     console.error('AI问题二生成失败:', error.message);
@@ -245,9 +245,13 @@ app.post('/api/ai/question2', async (req, res) => {
 /**
  * v1.5: 生成问题一（状态1：定框架与预算）
  */
-async function generateQuestion1(userInput) {
+async function generateQuestion1(userInput, excludeTags = []) {
+  const excludeStr = excludeTags.length > 0
+    ? `\n【换一换排除词】：「${excludeTags.join('、')}」，这些标签刚刚已经展示过，本次生成的所有标签的value字段必须与排除词完全不同，不能语义重复。`
+    : '';
+
   const userPrompt = `用户初始意图：「${userInput}」
-已选标签：空（无）
+已选标签：空（无）${excludeStr}
 
 当前处于【状态1：定框架与预算】
 请根据用户意图，生成第一个问题，包含2-3个价格标签和4-5个核心款式标签。
@@ -295,12 +299,16 @@ async function generateQuestion1(userInput) {
  * @param {string} userInput - 用户初始意图
  * @param {string[]} q1Answers - 问题一选择的标签数组
  */
-async function generateQuestion2(userInput, q1Answers) {
+async function generateQuestion2(userInput, q1Answers, excludeTags = []) {
   // 将标签数组拼接成字符串
   const selectedTags = Array.isArray(q1Answers) ? q1Answers.join('，') : q1Answers;
 
+  const excludeStr = excludeTags.length > 0
+    ? `\n【换一换排除词】：「${excludeTags.join('、')}」，这些标签刚刚已经展示过，本次生成的所有标签的value字段必须与排除词完全不同，不能语义重复。`
+    : '';
+
   const userPrompt = `用户初始意图：「${userInput}」
-已选标签：「${selectedTags}」
+已选标签：「${selectedTags}」${excludeStr}
 
 当前处于【状态2：定风格与长尾词】
 请根据已选标签，生成第二个问题。
